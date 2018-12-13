@@ -3,5 +3,15 @@ name = "brqueue"
 version = "0.1.0"
 authors = ["Zlepper <hansen13579@gmail.com>"]
 edition = "2018"
+publish = false
 
 [dependencies]
+grpc            = "0.6.1"
+protobuf        = "2.2.0"
+futures         = "0.1.25"
+futures-cpupool = "0.1.8"
+tls-api            = "0.1.20"
+tls-api-native-tls = "0.1.20"
+
+[build-dependencies]
+protoc-rust-grpc = "0.6.1"
