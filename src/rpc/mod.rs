@@ -1,5 +1,5 @@
-pub use self::test::*;
-pub use self::test_grpc::*;
+pub use self::queue::*;
+pub use self::queue_grpc::*;
 
-mod test;
-mod test_grpc;
+mod queue;
+mod queue_grpc;

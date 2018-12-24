@@ -3,6 +3,7 @@ use std::collections::VecDeque;
 use std::iter::{FromIterator, Iterator};
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::fmt;
 
 // Tags for messages
 #[derive(Clone)]
@@ -52,6 +53,14 @@ pub struct Queue<T: Send + Clone> {
 #[derive(Debug)]
 pub enum Error {
     QueueCorrupted
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Error::QueueCorrupted => write!(f, "Queue corrupted")
+        }
+    }
 }
 
 impl<T: Send + Clone> Queue<T> {
