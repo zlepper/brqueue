@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::convert;
 use std::fmt;
 use std::fs::{create_dir_all, File, OpenOptions};
@@ -6,49 +8,21 @@ use std::io::Write;
 use std::path;
 use std::sync::Arc;
 use std::sync::mpsc;
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Mutex;
 
 use bincode::{deserialize, Error as BinCodeError, serialize};
 use log::{debug, error};
+use serde::Deserialize;
+use serde::Serialize;
 use serde_derive::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::models::Priority;
+use crate::models::QueueItem;
+use crate::models::Tags;
+
 use super::queue;
-use std::collections::HashMap;
-use std::collections::VecDeque;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkEntry {
-    message: Vec<u8>,
-    id: String,
-}
-
-impl WorkEntry {
-    fn new(message: Vec<u8>) -> WorkEntry {
-        WorkEntry {
-            id: Uuid::new_v4().to_string(),
-            message,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct WorkItem {
-    priority: Priority,
-    required_capabilities: Vec<String>,
-    entry: WorkEntry,
-}
-
-impl WorkItem {
-    pub fn new(message: Vec<u8>, priority: Priority, required_capabilities: Vec<String>) -> WorkItem {
-        WorkItem {
-            priority,
-            required_capabilities,
-            entry: WorkEntry::new(message),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub enum Error {
@@ -68,39 +42,35 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Error::QueueCorrupted => write!(f, "Queue corrupted"),
-            Error::FailedToOpenPersistenceFiles(e) => write!(f, "Failed to open persistence files: {}", e),
+            Error::FailedToOpenPersistenceFiles(e) => {
+                write!(f, "Failed to open persistence files: {}", e)
+            }
             Error::FileMutexCorrupt => write!(f, "File mutex corrupted"),
-            Error::FailedToSerializeWorkItem(e) => write!(f, "Failed to serialize work item: {}", e),
+            Error::FailedToSerializeWorkItem(e) => {
+                write!(f, "Failed to serialize work item: {}", e)
+            }
         }
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
-pub enum Priority {
-    Low,
-    High,
-}
-
-
 #[derive(Clone)]
-struct InternalQueueManager {
-    high_priority_queue: queue::Queue<WorkEntry>,
-    low_priority_queue: queue::Queue<WorkEntry>,
+struct InternalQueueManager<T: Send + Clone> {
+    high_priority_queue: queue::Queue<T>,
+    low_priority_queue: queue::Queue<T>,
 }
 
-impl InternalQueueManager {
-    fn new() -> InternalQueueManager {
+impl<T: Send + Clone> InternalQueueManager<T> {
+    fn new() -> InternalQueueManager<T> {
         InternalQueueManager {
             high_priority_queue: queue::Queue::new(),
             low_priority_queue: queue::Queue::new(),
         }
     }
 
-    fn enqueue(&mut self, entry: WorkEntry, priority: Priority, required_capabilities: Vec<String>) -> Result<(), Error> {
-        let tags = queue::Tags::from(required_capabilities);
-        let result = match priority {
-            Priority::Low => self.low_priority_queue.enqueue(entry, tags),
-            Priority::High => self.high_priority_queue.enqueue(entry, tags),
+    fn enqueue(&mut self, item: QueueItem<T>) -> Result<(), Error> {
+        let result = match item.priority {
+            Priority::Low => self.low_priority_queue.enqueue(item),
+            Priority::High => self.high_priority_queue.enqueue(item),
         };
 
         if result.is_err() {
@@ -111,8 +81,8 @@ impl InternalQueueManager {
         }
     }
 
-    fn pop(&mut self, capabilities: Vec<String>) -> Result<Option<WorkEntry>, Error> {
-        let tags = queue::Tags::from(capabilities);
+    fn pop(&mut self, capabilities: Vec<String>) -> Result<Option<QueueItem<T>>, Error> {
+        let tags = Tags::from(capabilities);
 
         // Try the queues in order
         match self.high_priority_queue.pop(&tags) {
@@ -122,21 +92,22 @@ impl InternalQueueManager {
                 Err(e) => Err(Error::QueueCorrupted),
                 Ok(Some(entry)) => Ok(Some(entry)),
                 Ok(None) => Ok(None),
-            }
+            },
         }
     }
 
-    fn get_content(&self) -> Result<Vec<WorkEntry>, Error> {
-        match self.high_priority_queue.get_content() {
-            Err(e) => Err(Error::QueueCorrupted),
-            Ok(mut high_priority_content) => match self.low_priority_queue.get_content() {
-                Err(e) => Err(Error::QueueCorrupted),
-                Ok(mut low_priority_content) => {
-                    high_priority_content.append(&mut low_priority_content);
-                    Ok(high_priority_content)
-                }
-            }
-        }
+    fn get_content(&self) -> Result<Vec<QueueItem<Vec<u8>>>, Error> {
+        //        match self.high_priority_queue.get_content() {
+        //            Err(e) => Err(Error::QueueCorrupted),
+        //            Ok(mut high_priority_content) => match self.low_priority_queue.get_content() {
+        //                Err(e) => Err(Error::QueueCorrupted),
+        //                Ok(mut low_priority_content) => {
+        //                    high_priority_content.append(&mut low_priority_content);
+        //                    Ok(high_priority_content)
+        //                }
+        //            },
+        //        }
+        Ok(Vec::new())
     }
 }
 
@@ -168,7 +139,7 @@ impl InternalQueueFileManager {
         })
     }
 
-    fn save_item(&self, item: &WorkItem) -> Result<(), Error> {
+    fn save_item<T: Serialize + Send + Clone>(&self, item: &QueueItem<T>) -> Result<(), Error> {
         let file_ref = match item.priority {
             Priority::Low => &self.low_priority_file,
             Priority::High => &self.high_priority_file,
@@ -177,14 +148,14 @@ impl InternalQueueFileManager {
         if let Ok(mut file) = file_ref.lock() {
             let mut encoded = match serialize(item) {
                 Err(e) => return Err(Error::FailedToSerializeWorkItem(e)),
-                Ok(encoded) => encoded
+                Ok(encoded) => encoded,
             };
 
             let size = encoded.len() as u64;
 
             let mut encoded_len = match serialize(&size) {
                 Err(e) => return Err(Error::FailedToSerializeWorkItem(e)),
-                Ok(encoded) => encoded
+                Ok(encoded) => encoded,
             };
 
             encoded_len.append(&mut encoded);
@@ -202,62 +173,73 @@ impl InternalQueueFileManager {
 }
 
 #[derive(Clone)]
-pub struct QueueServer {
-    queue: InternalQueueManager,
+pub struct QueueServer<T: Send + Clone> {
+    queue: InternalQueueManager<T>,
     file_manager: InternalQueueFileManager,
-    waiting: Arc<Mutex<VecDeque<Sender>>>,
-    processing: Arc<Mutex<HashMap<String, WorkItem>>>
+    waiting: Arc<Mutex<VecDeque<Sender<QueueItem<T>>>>>,
+    processing: Arc<Mutex<HashMap<String, QueueItem<T>>>>,
 }
 
 pub struct CreatedMessage {
-    pub id: String,
+    pub id: Uuid,
 }
 
-impl QueueServer {
-    pub fn new() -> Result<QueueServer, Error> {
+impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
+    pub fn new() -> Result<QueueServer<T>, Error> {
         let file_manager = InternalQueueFileManager::new("./storage/tasks".to_string())?;
 
         return Ok(QueueServer {
             queue: InternalQueueManager::new(),
             file_manager,
-            waiting: Arc::new(Mutex::new(VecDeque::new()))
+            waiting: Arc::new(Mutex::new(VecDeque::new())),
+            processing: Arc::new(Mutex::new(HashMap::new())),
         });
     }
 
-    fn add_item_to_queue(&mut self, item: &WorkItem) -> Result<(), Error> {
-        self.queue.enqueue(item.entry.to_owned(), item.priority.to_owned(), item.required_capabilities.to_owned())
+    fn add_item_to_queue(&mut self, item: QueueItem<T>) -> Result<(), Error> {
+        self.queue.enqueue(item)
     }
 
     // Enqueues another item in the queue.
     // The generated id of the enqueued item is returned
-    pub fn enqueue(&mut self, message: Vec<u8>, priority: Priority, required_capabilities: Vec<String>) -> Result<CreatedMessage, Error> {
-        let item = WorkItem::new(message, priority, required_capabilities.clone());
+    pub fn enqueue(
+        &mut self,
+        message: T,
+        priority: Priority,
+        required_capabilities: Vec<String>,
+    ) -> Result<CreatedMessage, Error> {
+        let item = QueueItem::new(message, Tags::from(required_capabilities), priority);
 
         match self.file_manager.save_item(&item) {
             Err(e) => return Err(e),
             _ => debug!("Item saved to disk without issues"),
         }
 
-
-        let id = item.entry.id.clone();
-        let result = self.add_item_to_queue(&item);
+        let id = item.id.clone();
+        let result = self.add_item_to_queue(item);
         match result {
             Err(e) => return Err(e),
-            _ => debug!("Item added to queue without issues. ")
+            _ => debug!("Item added to queue without issues. "),
         }
 
         Ok(CreatedMessage { id })
     }
 
-    pub fn pop(&mut self, capabilities: Vec<String>, wait_for_message: bool) -> Result<Option<WorkEntry>, Error> {
+    pub fn pop(
+        &mut self,
+        capabilities: Vec<String>,
+        wait_for_message: bool,
+    ) -> Result<Option<QueueItem<T>>, Error> {
         match self.queue.pop(capabilities) {
             Err(e) => Err(e),
             Ok(Some(entry)) => Ok(Some(entry)),
-            Ok(None) => if wait_for_message {
-                let (tx, rc) = mpsc::channel();
-
-            } else {
-                Ok(None)
+            Ok(None) => {
+                if wait_for_message {
+                    //                let (tx, rc) = mpsc::channel();
+                    Ok(None)
+                } else {
+                    Ok(None)
+                }
             }
         }
     }

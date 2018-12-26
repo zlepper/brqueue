@@ -1,92 +1,44 @@
 extern crate bincode;
 extern crate env_logger;
 extern crate futures;
-extern crate futures_cpupool;
-extern crate grpc;
 extern crate protobuf;
 extern crate uuid;
 
+use std::net::{TcpListener, TcpStream};
+use std::sync::Arc;
 use std::thread;
 
-use grpc::{RequestOptions, SingleResponse, StreamingResponse};
-use std::sync::Arc;
-
-mod rpc;
+mod client;
+mod models;
 mod queue;
 mod queue_server;
+mod rpc;
 
-#[derive(Clone)]
-struct QueueServer {
-    server: queue_server::QueueServer,
-}
-
-impl QueueServer {
-    fn new() -> QueueServer {
-        let server = queue_server::QueueServer::new().expect("Could not create queue server");
-
-        QueueServer {
-            server,
-        }
-    }
-}
-
-fn rpc_priority_to_queue_priority(p: rpc::Priority) -> queue_server::Priority {
-    match p {
-        rpc::Priority::LOW => queue_server::Priority::Low,
-        rpc::Priority::HIGH => queue_server::Priority::High,
-    }
-}
-
-impl rpc::Queue for QueueServer {
-    fn enqueue(&self, _o: RequestOptions, p: rpc::EnqueueRequest) -> SingleResponse<rpc::EnqueueResponse> {
-        let priority = rpc_priority_to_queue_priority(p.get_priority());
-        let mut s = self.to_owned();
-        match s.server.enqueue(p.get_message().into(), priority, p.get_requiredCapabilities().into()) {
-            Ok(queue_server::CreatedMessage{id}) => {
-                let mut response = rpc::EnqueueResponse::new();
-                response.set_id(id);
-                response.set_success(true);
-                SingleResponse::completed(response)
-            },
-            Err(err) => {
-                let mut response = rpc::EnqueueResponse::new();
-                response.set_success(false);
-                SingleResponse::completed(response)
-            },
-        }
-    }
-
-    fn pop(&self, _o: RequestOptions, p: rpc::GetRequest) -> SingleResponse<rpc::GetResponse> {
-        _o.
-        let mut s = self.to_owned();
-        unimplemented!()
-    }
-
-    fn get_all(&self, _o: RequestOptions, p: rpc::GetAllRequest) -> SingleResponse<rpc::GetAllResponse> {
-        unimplemented!()
-    }
-
-    fn subscribe(&self, _o: RequestOptions, p: rpc::SubscribeRequest) -> StreamingResponse<rpc::SubscribeResponse> {
-        unimplemented!()
-    }
-
-    fn acknowledge_work(&self, _o: RequestOptions, p: rpc::AcknowledgeWorkRequest) -> SingleResponse<rpc::AcknowledgeWorkResponse> {
-        unimplemented!()
-    }
+fn handle_connection(mut s: TcpStream, qs: queue_server::QueueServer<Vec<u8>>) {
+    thread::spawn(move || {
+        let mut c = client::Client::new(qs);
+        c.handle_connection(s);
+    });
 }
 
 fn main() {
-    let mut server: grpc::ServerBuilder<tls_api_native_tls::TlsAcceptor> = grpc::ServerBuilder::new();
+    let mut qs = match queue_server::QueueServer::new() {
+        Err(e) => {
+            eprintln!("Failed to create underlying queue: {}", e);
+            std::process::exit(1);
+        }
+        Ok(qs) => qs,
+    };
 
-    server.http.set_port(21000);
-    server.add_service(rpc::QueueServer::new_service_def(QueueServer::new()));
-    server.http.set_cpu_pool_threads(4);
+    let listener = TcpListener::bind("0.0.0.0:6431").expect("Failed to bind to socket");
 
-    let _server = server.build().expect("Failed to start server");
+    println!("Listening on localhost:6431");
 
-    println!("Test server started on port {}", 21000);
-
-    loop {
-        thread::park();
+    for stream_result in listener.incoming() {
+        let q = qs.clone();
+        match stream_result {
+            Ok(mut stream) => handle_connection(stream, q),
+            Err(e) => eprintln!("Stream failed: {}", e),
+        }
     }
 }

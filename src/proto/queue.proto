@@ -5,91 +5,72 @@ enum Priority {
     HIGH = 1;
 }
 
-message Message {
-    // The message itself, something rbqueue pretty much just passes
-    // around, without caring about what is stored there
-    bytes message = 1;
-    // The id of the message, UUID form
-    string id = 2;
-    // The priority of the message. High will be taken before Low
-    Priority priority = 3;
-    // The capabilities required to handle this message
-    repeated string requiredCapabilities = 4;
-}
-
+// Puts a new message in the queue
 message EnqueueRequest {
-    // The actual message itself to pass along
+    // The actual task to enqueue
     bytes message = 1;
-    // The priority of the message. High will be taken before Low
+    // The priority of the task
     Priority priority = 2;
-    // The capabilities required to handle this message
+    // What capabilities are required to handle the task
     repeated string requiredCapabilities = 3;
+
+    int32 refId = 4;
 }
 
 message EnqueueResponse {
-    // Indicates if the enqueue succeeded
-    bool success = 2;
-    // The id the message got in the queue
+    // The id of the created task
+    string id = 1;
+
+    int32 refId = 2;
+}
+
+// Removes a single message from the queue
+message PopRequest {
+    // What capabilities the client has available
+    repeated string availableCapabilities = 1;
+    // If the server should wait for a message to come in, before returning
+    // with a response
+    bool waitForMessage = 2;
+
+    // An optional reference id that will be passed back with
+    // the PopResponse, incase the client is multiplexing the
+    // socket
+    int32 refId = 3;
+}
+
+message PopResponse {
+    // True if there was a message available
+    bool hadResult = 3;
+    // The actual message to process
+    bytes message = 1;
+    // The id of the message
+    // Should be returned with the acknowledge request
+    string id = 2;
+    // The refId from the request
+    int32 refId = 4;
+}
+
+message AcknowledgeRequest {
+    // The id of the message to acknowledge
     string id = 1;
 }
 
-message GetRequest {
-    // If the server should wait for a message to come in before
-    // returning, in case there are no message available
-    // if set to false, the server will return immediately if there
-    // are no messages in queue
-    bool waitForMessage = 1;
-    // The capabilities the client has available
-    repeated string capabilities = 2;
+message ErrorResponse {
+    string message = 1;
 }
 
-message GetResponse {
-    Message message = 1;
+// Wraps the requests for easier parsing on the socket layer
+message RequestWrapper {
+    oneof message {
+        EnqueueRequest enqueue = 1;
+        PopRequest pop = 2;
+        AcknowledgeRequest acknowledge = 3;
+    }
 }
 
-message GetAllRequest {
-
-}
-
-message GetAllResponse {
-    repeated Message messages = 1;
-}
-
-message SubscribeRequest {
-    // How many should max be send back before the stream gets closed
-    int64 maxCount = 2;
-    // The capabilities the worker has available
-    repeated string capabilities = 1;
-}
-
-message SubscribeResponse {
-    Message message = 1;
-}
-
-message AcknowledgeWorkRequest {
-    string messageId = 1;
-}
-
-message AcknowledgeWorkResponse {
-
-}
-
-// The central queue in each brqueue instance
-service Queue {
-    // Enqueues a new message on the queue. When the response is returned, the
-    // message has been safely received by brqueue.
-    rpc Enqueue(EnqueueRequest) returns (EnqueueResponse) {}
-    // Gets all messages currently enqueued
-    // Beware, this can be quite a lot of messages
-    rpc GetAll(GetAllRequest) returns (GetAllResponse) {}
-
-    // Subscribes to work messages. Only one message will be dispatched
-    // to each subscription, until the previous message has been acknowledged
-    rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse) {}
-
-    // Has to be called when a message has been processed, to let the server
-    // know that the message is finished, and can be cleared from the queue safely.
-    // If the worker is subscribing to work, additional work will be sent to the
-    // worker very shortly.
-    rpc AcknowledgeWork(AcknowledgeWorkRequest) returns (AcknowledgeWorkResponse) {}
+message ResponseWrapper {
+    oneof message {
+        EnqueueResponse enqueue = 1;
+        PopResponse pop = 2;
+    }
 }

@@ -1,0 +1,7 @@
+.idea/
+target/
+.gitignore
+.git/
+build-linux.cmd
+*.iml
+Dockerfile

@@ -1,160 +1,135 @@
 use std::collections::HashSet;
 use std::collections::VecDeque;
+use std::fmt;
 use std::iter::{FromIterator, Iterator};
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::fmt;
+use std::thread::{JoinHandle, spawn};
+
+use crossbeam::channel::{Receiver, Sender, unbounded};
+
+use crate::models::{QueueItem, Tags};
 
 // Tags for messages
-#[derive(Clone)]
-pub struct Tags {
-    inner: HashSet<String>,
-}
-
-impl Tags {
-    pub fn from(v: Vec<String>) -> Tags {
-        Tags { inner: HashSet::from_iter(v) }
-    }
-
-    pub fn new() -> Tags {
-        Tags { inner: HashSet::new() }
-    }
-
-    pub fn add_tag(&mut self, s: String) {
-        self.inner.insert(s);
-    }
-
-    pub fn is_subset(&self, other: &Tags) -> bool {
-        self.inner.is_subset(&other.inner)
-    }
-
-    pub fn is_superset(&self, other: &Tags) -> bool {
-        return self.inner.is_superset(&other.inner);
-    }
-}
-
-#[derive(Clone)]
-struct QueueItem<T: Send> {
-    data: T,
-    required_tags: Tags,
-}
-
-impl<T: Send> QueueItem<T> {
-    pub fn can_be_handled_by(&self, tags: &Tags) -> bool {
-        tags.is_superset(&self.required_tags)
-    }
-}
 
 #[derive(Clone)]
 pub struct Queue<T: Send + Clone> {
-    data: Arc<Mutex<VecDeque<QueueItem<T>>>>
+    sender: Sender<QueueItem<T>>,
+    receiver: Receiver<QueueItem<T>>,
 }
 
 #[derive(Debug)]
 pub enum Error {
-    QueueCorrupted
+    QueueCorrupted,
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Error::QueueCorrupted => write!(f, "Queue corrupted")
+            Error::QueueCorrupted => write!(f, "Queue corrupted"),
         }
     }
 }
 
 impl<T: Send + Clone> Queue<T> {
     pub fn new() -> Queue<T> {
-        Queue { data: Arc::new(Mutex::new(VecDeque::new())) }
+        let (sender, receiver) = unbounded();
+
+        Queue { sender, receiver }
     }
 
-    pub fn enqueue(&mut self, data: T, required_tags: Tags) -> Result<(), Error> {
-        if let Ok(mut queue) = self.data.lock() {
-            queue.push_back(QueueItem { data, required_tags });
-            Ok(())
-        } else {
-            Err(Error::QueueCorrupted)
+    pub fn enqueue(&mut self, item: QueueItem<T>) -> Result<(), Error> {
+        match self.sender.send(item) {
+            Err(e) => Err(Error::QueueCorrupted),
+            Ok(()) => Ok(()),
         }
     }
 
-    pub fn pop(&mut self, capabilities: &Tags) -> Result<Option<T>, Error> {
-        if let Ok(mut queue) = self.data.lock() {
-            let mut bad_matches = VecDeque::new();
+    pub fn pop(&mut self, capabilities: &Tags) -> Result<Option<QueueItem<T>>, Error> {
+        let mut failures = Vec::new();
 
-            while let Some(q) = queue.pop_front() {
-                if q.can_be_handled_by(capabilities) {
-                    for m in bad_matches {
-                        queue.push_front(m)
+        while let Ok(q) = self.receiver.try_recv() {
+            if q.can_be_handled_by(capabilities) {
+                if !failures.is_empty() {
+                    // If there were any failures, put them in the back of the queue for now
+                    for failure in failures {
+                        self.sender.send(failure);
                     }
-                    return Ok(Some(q.data));
-                } else {
-                    bad_matches.push_front(q)
                 }
+                return Ok(Some(q));
+            } else {
+                failures.push(q);
             }
-            Ok(None)
-        } else {
-            Err(Error::QueueCorrupted)
         }
+
+        Ok(None)
     }
 
-    pub fn get_content(&self) -> Result<Vec<T>, Error> {
-        if let Ok(queue) = self.data.lock() {
-            let r = queue.iter().map(|q| q.to_owned().data).collect();
-            Ok(r)
-        } else {
-            Err(Error::QueueCorrupted)
+    pub fn get_content(&mut self) -> Result<Vec<QueueItem<T>>, Error> {
+        let items: Vec<QueueItem<T>> = self.receiver.try_iter().collect();
+        // Add all the items back again
+        for item in &items {
+            self.sender.send(item.to_owned());
         }
+        Ok(items)
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::models::Priority;
+
     use super::*;
 
     mod queue_item_tests {
+        use crate::models::Priority;
+
         use super::*;
 
         #[test]
         fn multiple_tags() {
-            let item = QueueItem { data: "foo", required_tags: Tags::from(vec!["bar".to_string(), "foo".to_string()]) };
-
+            let item = QueueItem::new(
+                "foo",
+                Tags::from(vec!["bar".to_string(), "foo".to_string()]),
+                Priority::High,
+            );
             assert!(item.can_be_handled_by(&Tags::from(vec!["bar".to_string(), "foo".to_string()])));
             assert!(item.can_be_handled_by(&Tags::from(vec!["foo".to_string(), "bar".to_string()])));
         }
 
         #[test]
         fn single_bar() {
-            let item = QueueItem { data: "foo", required_tags: Tags::from(vec!["bar".to_string()]) };
+            let item = QueueItem::new("foo", Tags::from(vec!["bar".to_string()]), Priority::High);
             assert!(item.can_be_handled_by(&Tags::from(vec!["bar".to_string(), "foo".to_string()])));
         }
 
         #[test]
         fn single_foo() {
-            let item = QueueItem { data: "foo", required_tags: Tags::from(vec!["foo".to_string()]) };
+            let item = QueueItem::new("foo", Tags::from(vec!["foo".to_string()]), Priority::High);
             assert!(item.can_be_handled_by(&Tags::from(vec!["foo".to_string(), "bar".to_string()])));
         }
 
         #[test]
         fn no_tags_on_item() {
-            let item = QueueItem { data: "foo", required_tags: Tags::new() };
+            let item = QueueItem::new("foo", Tags::new(), Priority::High);
             assert!(item.can_be_handled_by(&Tags::from(vec!["foo".to_string()])));
         }
 
         #[test]
         fn no_tags_in_request() {
-            let item = QueueItem { data: "foo", required_tags: Tags::from(vec!["foo".to_string()]) };
+            let item = QueueItem::new("foo", Tags::from(vec!["foo".to_string()]), Priority::High);
             assert!(!item.can_be_handled_by(&Tags::new()));
         }
 
         #[test]
         fn more_tags_required_than_available() {
-            let item = QueueItem { data: "foo", required_tags: Tags::new() };
+            let item = QueueItem::new("foo", Tags::new(), Priority::High);
             assert!(item.can_be_handled_by(&Tags::new()));
         }
 
         #[test]
         fn tag_mismatch() {
-            let item = QueueItem { data: "foo", required_tags: Tags::from(vec!["bar".to_string()]) };
+            let item = QueueItem::new("foo", Tags::from(vec!["bar".to_string()]), Priority::High);
             assert!(!item.can_be_handled_by(&Tags::from(vec!["foo".to_string()])));
         }
     }
@@ -163,46 +138,27 @@ mod tests {
     fn can_add_and_remove() {
         let mut q = Queue::new();
 
-        q.enqueue("foo".to_string(), Tags::new());
-        q.enqueue("bar".to_string(), Tags::new());
-        q.enqueue("baz".to_string(), Tags::new());
+        q.enqueue(QueueItem::new("foo", Tags::new(), Priority::High));
+        q.enqueue(QueueItem::new("bar", Tags::new(), Priority::High));
+        q.enqueue(QueueItem::new("baz", Tags::new(), Priority::High));
 
-        assert_eq!(q.pop(&Tags::new()).unwrap(), Some("foo".to_string()));
-        assert_eq!(q.pop(&Tags::new()).unwrap(), Some("bar".to_string()));
-        assert_eq!(q.pop(&Tags::new()).unwrap(), Some("baz".to_string()));
-    }
-
-    #[test]
-    fn preserves_insertion_order_even_when_capabilities_steal_from_middle() {
-        let mut q = Queue::new();
-
-        q.enqueue("foo1".to_string(), Tags::from(vec!["a".to_string()]));
-        q.enqueue("foo2".to_string(), Tags::from(vec!["a".to_string()]));
-        q.enqueue("foo3".to_string(), Tags::from(vec!["a".to_string()]));
-        q.enqueue("bar".to_string(), Tags::from(vec!["b".to_string()]));
-        q.enqueue("baz1".to_string(), Tags::from(vec!["a".to_string()]));
-        q.enqueue("baz2".to_string(), Tags::from(vec!["a".to_string()]));
-
-        assert_eq!(q.pop(&Tags::from(vec!["b".to_string()])).unwrap(), Some("bar".to_string()));
-        assert_eq!(q.pop(&Tags::from(vec!["a".to_string()])).unwrap(), Some("foo1".to_string()));
-        assert_eq!(q.pop(&Tags::from(vec!["a".to_string()])).unwrap(), Some("foo2".to_string()));
-        assert_eq!(q.pop(&Tags::from(vec!["a".to_string()])).unwrap(), Some("foo3".to_string()));
-        assert_eq!(q.pop(&Tags::from(vec!["a".to_string()])).unwrap(), Some("baz1".to_string()));
-        assert_eq!(q.pop(&Tags::from(vec!["a".to_string()])).unwrap(), Some("baz2".to_string()));
+        assert_eq!(q.pop(&Tags::new()).unwrap().unwrap().data, "foo");
+        assert_eq!(q.pop(&Tags::new()).unwrap().unwrap().data, "bar");
+        assert_eq!(q.pop(&Tags::new()).unwrap().unwrap().data, "baz");
     }
 
     pub fn can_iterate_in_order() {
         let mut q = Queue::new();
 
-        q.enqueue("foo1".to_string(), Tags::new());
-        q.enqueue("foo2".to_string(), Tags::new());
-        q.enqueue("foo3".to_string(), Tags::new());
+        q.enqueue(QueueItem::new("foo1", Tags::new(), Priority::High));
+        q.enqueue(QueueItem::new("foo2", Tags::new(), Priority::High));
+        q.enqueue(QueueItem::new("foo3", Tags::new(), Priority::High));
 
         let mut content = q.get_content().unwrap();
 
         assert_eq!(content.len(), 3);
-        assert_eq!(content.get(0), Some(&"foo1".to_string()));
-        assert_eq!(content.get(1), Some(&"foo2".to_string()));
-        assert_eq!(content.get(2), Some(&"foo3".to_string()));
+        assert_eq!(content.get(0).unwrap().data, "foo1");
+        assert_eq!(content.get(1).unwrap().data, "foo2");
+        assert_eq!(content.get(2).unwrap().data, "foo3");
     }
 }
