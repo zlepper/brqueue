@@ -1331,7 +1331,7 @@ pub struct RequestWrapper {
     pub cached_size: ::protobuf::CachedSize,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone,PartialEq)]
 pub enum RequestWrapper_oneof_message {
     enqueue(EnqueueRequest),
     pop(PopRequest),
@@ -1363,7 +1363,8 @@ impl RequestWrapper {
 
     // Mutable pointer to the field.
     pub fn mut_enqueue(&mut self) -> &mut EnqueueRequest {
-        if let ::std::option::Option::Some(RequestWrapper_oneof_message::enqueue(_)) = self.message {} else {
+        if let ::std::option::Option::Some(RequestWrapper_oneof_message::enqueue(_)) = self.message {
+        } else {
             self.message = ::std::option::Option::Some(RequestWrapper_oneof_message::enqueue(EnqueueRequest::new()));
         }
         match self.message {
@@ -1411,7 +1412,8 @@ impl RequestWrapper {
 
     // Mutable pointer to the field.
     pub fn mut_pop(&mut self) -> &mut PopRequest {
-        if let ::std::option::Option::Some(RequestWrapper_oneof_message::pop(_)) = self.message {} else {
+        if let ::std::option::Option::Some(RequestWrapper_oneof_message::pop(_)) = self.message {
+        } else {
             self.message = ::std::option::Option::Some(RequestWrapper_oneof_message::pop(PopRequest::new()));
         }
         match self.message {
@@ -1459,7 +1461,8 @@ impl RequestWrapper {
 
     // Mutable pointer to the field.
     pub fn mut_acknowledge(&mut self) -> &mut AcknowledgeRequest {
-        if let ::std::option::Option::Some(RequestWrapper_oneof_message::acknowledge(_)) = self.message {} else {
+        if let ::std::option::Option::Some(RequestWrapper_oneof_message::acknowledge(_)) = self.message {
+        } else {
             self.message = ::std::option::Option::Some(RequestWrapper_oneof_message::acknowledge(AcknowledgeRequest::new()));
         }
         match self.message {
@@ -1690,7 +1693,7 @@ pub struct ResponseWrapper {
     pub cached_size: ::protobuf::CachedSize,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone,PartialEq)]
 pub enum ResponseWrapper_oneof_message {
     enqueue(EnqueueResponse),
     pop(PopResponse),
@@ -1721,7 +1724,8 @@ impl ResponseWrapper {
 
     // Mutable pointer to the field.
     pub fn mut_enqueue(&mut self) -> &mut EnqueueResponse {
-        if let ::std::option::Option::Some(ResponseWrapper_oneof_message::enqueue(_)) = self.message {} else {
+        if let ::std::option::Option::Some(ResponseWrapper_oneof_message::enqueue(_)) = self.message {
+        } else {
             self.message = ::std::option::Option::Some(ResponseWrapper_oneof_message::enqueue(EnqueueResponse::new()));
         }
         match self.message {
@@ -1769,7 +1773,8 @@ impl ResponseWrapper {
 
     // Mutable pointer to the field.
     pub fn mut_pop(&mut self) -> &mut PopResponse {
-        if let ::std::option::Option::Some(ResponseWrapper_oneof_message::pop(_)) = self.message {} else {
+        if let ::std::option::Option::Some(ResponseWrapper_oneof_message::pop(_)) = self.message {
+        } else {
             self.message = ::std::option::Option::Some(ResponseWrapper_oneof_message::pop(PopResponse::new()));
         }
         match self.message {

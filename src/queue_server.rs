@@ -23,6 +23,7 @@ use crate::models::QueueItem;
 use crate::models::Tags;
 
 use super::queue;
+use std::io::BufWriter;
 
 #[derive(Debug)]
 pub enum Error {
@@ -114,11 +115,11 @@ impl<T: Send + Clone> InternalQueueManager<T> {
 #[derive(Clone)]
 struct InternalQueueFileManager {
     // All the high priority tasks received
-    high_priority_file: Arc<Mutex<File>>,
+    high_priority_file: Arc<Mutex<BufWriter<File>>>,
     // All the low priority tasks received
-    low_priority_file: Arc<Mutex<File>>,
+    low_priority_file: Arc<Mutex<BufWriter<File>>>,
     // Contains a complete list of all the tasks that has been finished
-    completed_file_index_file: Arc<Mutex<File>>,
+    completed_file_index_file: Arc<Mutex<BufWriter<File>>>,
 }
 
 impl InternalQueueFileManager {
@@ -133,9 +134,9 @@ impl InternalQueueFileManager {
         let completed_file = options.open(format!("{}_completed.dat", filename))?;
 
         Ok(InternalQueueFileManager {
-            high_priority_file: Arc::new(Mutex::new(high_prio_file)),
-            low_priority_file: Arc::new(Mutex::new(low_prio_file)),
-            completed_file_index_file: Arc::new(Mutex::new(completed_file)),
+            high_priority_file: Arc::new(Mutex::new(BufWriter::new(high_prio_file))),
+            low_priority_file: Arc::new(Mutex::new(BufWriter::new(low_prio_file))),
+            completed_file_index_file: Arc::new(Mutex::new(BufWriter::new(completed_file))),
         })
     }
 
@@ -163,7 +164,7 @@ impl InternalQueueFileManager {
             // Write the data to the disk, and ensure the
             // content has been flushed to disk.
             file.write(&encoded_len)?;
-            file.flush()?;
+//            file.flush()?;
 
             Ok(())
         } else {
@@ -177,7 +178,7 @@ pub struct QueueServer<T: Send + Clone> {
     queue: InternalQueueManager<T>,
     file_manager: InternalQueueFileManager,
     waiting: Arc<Mutex<VecDeque<Sender<QueueItem<T>>>>>,
-    processing: Arc<Mutex<HashMap<String, QueueItem<T>>>>,
+    processing: Arc<Mutex<HashMap<Uuid, QueueItem<T>>>>,
 }
 
 pub struct CreatedMessage {
@@ -185,8 +186,8 @@ pub struct CreatedMessage {
 }
 
 impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
-    pub fn new() -> Result<QueueServer<T>, Error> {
-        let file_manager = InternalQueueFileManager::new("./storage/tasks".to_string())?;
+    pub fn new_with_filename(filename: String) -> Result<QueueServer<T>, Error> {
+        let file_manager = InternalQueueFileManager::new(filename)?;
 
         return Ok(QueueServer {
             queue: InternalQueueManager::new(),
@@ -194,6 +195,10 @@ impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
             waiting: Arc::new(Mutex::new(VecDeque::new())),
             processing: Arc::new(Mutex::new(HashMap::new())),
         });
+    }
+
+    pub fn new() -> Result<QueueServer<T>, Error> {
+        QueueServer::new_with_filename("./storage/tasks".to_string())
     }
 
     fn add_item_to_queue(&mut self, item: QueueItem<T>) -> Result<(), Error> {
@@ -243,5 +248,53 @@ impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
             }
         }
     }
+
+    pub fn acknowledge(id: Uuid) {}
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread::spawn;
+
+    #[test]
+    fn enqueue_and_pop_with_wait_for_message() {
+        let mut qs = QueueServer::new_with_filename("storage/test1".to_string()).expect("Failed to create queue server");
+
+        qs.enqueue("foo", Priority::High, vec!["foo".to_string()]);
+        qs.enqueue("bar", Priority::High, vec!["bar".to_string()]);
+
+        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "foo");
+        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "bar");
+    }
+
+    #[test]
+    fn enqueue_and_pop_without_wait_for_message() {
+        let mut qs = QueueServer::new_with_filename("storage/test2".to_string()).expect("Failed to create queue server");
+
+        qs.enqueue("foo", Priority::High, vec!["foo".to_string()]);
+        qs.enqueue("bar", Priority::High, vec!["bar".to_string()]);
+
+        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().unwrap().data, "foo");
+        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().unwrap().data, "bar");
+    }
+
+    #[test]
+    #[ignore]
+    fn rough_benchmark() {
+        let mut qs = QueueServer::new_with_filename("storage/test3".to_string()).expect("Failed to create queue server");
+        let mut handles = Vec::new();
+        for i in 0..100 {
+            let mut q = qs.clone();
+            let handle = spawn(move || {
+                for j in 0..10000 {
+                    q.enqueue("foo", Priority::High, vec!["foo".to_string()]);
+                }
+            });
+            handles.push(handle);
+        }
+        for h in handles {
+            h.join();
+        }
+    }
+}

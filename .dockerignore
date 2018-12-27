@@ -5,3 +5,4 @@ target/
 build-linux.cmd
 *.iml
 Dockerfile
+storage/

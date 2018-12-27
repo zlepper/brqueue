@@ -125,9 +125,24 @@ impl Client {
         Client { queue_server }
     }
 
-    fn pop(&mut self) {}
+    fn pop(&mut self, request: &rpc::PopRequest, s: &mut TcpStream) {
+        let capabilities = request.get_availableCapabilities();
+        let wait_for_messages = request.get_waitForMessage();
+        let ref_id = request.get_refId();
 
-    fn acknowledge(&mut self) {}
+        let mut qs = &mut self.queue_server.to_owned();
+
+        match qs.pop(capabilities.to_vec(), wait_for_messages) {
+            Ok(Some(item)) => {},
+            Ok(None) => {},
+            Err(e) => {
+                eprintln!("Failed to pop message: {}", e);
+                reply_error(s);
+            }
+        }
+    }
+
+    fn acknowledge(&mut self, request: &rpc::AcknowledgeRequest) {}
 
     fn enqueue(&mut self, request: &rpc::EnqueueRequest, s: &mut TcpStream) {
         let priority = request.get_priority();
