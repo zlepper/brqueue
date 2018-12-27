@@ -53,10 +53,44 @@ message PopResponse {
 message AcknowledgeRequest {
     // The id of the message to acknowledge
     string id = 1;
+
+    int32 refId = 2;
+}
+
+// Returned when a message has been acknowledged
+message AcknowledgeResponse {
+    // The refId from the acknowledge request
+    int32 refId = 1;
+}
+
+// Write the full current queue back to the tpc stream
+// As the response is not instant, it doesn't gaurantee that some
+// of the messages hasn't been completed in the meantime, or
+// that new messages has arrived
+message ListFullQueueRequest {
+    int32 refId = 1;
+}
+
+// A partial response about a single message in the queue
+message ListFullQueueResponse {
+    // The index of this message, useful if the client wants to order messages
+    int32 segmentIndex = 1;
+    // The request refId
+    int32 refId = 2;
+    // The actual message
+    bytes message = 3;
+    // The id of the message
+    string id = 4;
+    // If the listing has finished. When this is received, the
+    // rest of the fields doesn't make sense (expect refId of course)
+    bool finished = 5;
 }
 
 message ErrorResponse {
+    // What went wrong
     string message = 1;
+    // The refId from the request that failed
+    int32 refId = 2;
 }
 
 // Wraps the requests for easier parsing on the socket layer
@@ -65,6 +99,7 @@ message RequestWrapper {
         EnqueueRequest enqueue = 1;
         PopRequest pop = 2;
         AcknowledgeRequest acknowledge = 3;
+        ListFullQueueRequest listFullQueue = 4;
     }
 }
 
@@ -72,5 +107,9 @@ message ResponseWrapper {
     oneof message {
         EnqueueResponse enqueue = 1;
         PopResponse pop = 2;
+        AcknowledgeResponse acknowledge = 3;
+        // If something went wrong
+        ErrorResponse error = 4;
+        ListFullQueueResponse listFullQueue = 5;
     }
 }

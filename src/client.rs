@@ -1,4 +1,5 @@
 use core::borrow::BorrowMut;
+use std::collections::HashSet;
 use std::io::Cursor;
 use std::io::Error as StdError;
 use std::io::Read;
@@ -11,6 +12,7 @@ use std::time::Duration;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use log::debug;
 use protobuf::{Message, ProtobufError};
+use uuid::Uuid;
 
 use crate::models;
 
@@ -96,7 +98,7 @@ fn to_binary(message: rpc::ResponseWrapper) -> Result<Vec<u8>, Error> {
     }
 }
 
-fn reply_success(s: &mut TcpStream, message: rpc::ResponseWrapper) -> Result<(), Error> {
+fn send_reply(s: &mut TcpStream, message: rpc::ResponseWrapper) -> Result<(), Error> {
     let mut data = to_binary(message)?;
 
     let mut size = match get_size_array(data.len() as i32) {
@@ -112,17 +114,29 @@ fn reply_success(s: &mut TcpStream, message: rpc::ResponseWrapper) -> Result<(),
     }
 }
 
-fn reply_error(s: &mut TcpStream) {
-    unimplemented!();
+fn reply_error(s: &mut TcpStream, message: String, ref_id: i32) {
+    let mut response = rpc::ErrorResponse::new();
+    response.set_message(message);
+    response.set_refId(ref_id);
+    let mut wrapper = rpc::ResponseWrapper::new();
+    wrapper.set_error(response);
+
+    match send_reply(s, wrapper) {
+        Ok(_) => {}
+        Err(e) => eprintln!("Failed to write error: {}", e),
+    }
 }
 
+// One client corresponds to exactly one connection
+// to the server
 pub struct Client {
     queue_server: queue_server::QueueServer<Vec<u8>>,
+    outstanding_tasks: HashSet<Uuid>,
 }
 
 impl Client {
     pub fn new(queue_server: queue_server::QueueServer<Vec<u8>>) -> Client {
-        Client { queue_server }
+        Client { queue_server, outstanding_tasks: HashSet::new() }
     }
 
     fn pop(&mut self, request: &rpc::PopRequest, s: &mut TcpStream) {
@@ -133,21 +147,73 @@ impl Client {
         let mut qs = &mut self.queue_server.to_owned();
 
         match qs.pop(capabilities.to_vec(), wait_for_messages) {
-            Ok(Some(item)) => {},
-            Ok(None) => {},
+            Ok(Some(item)) => {
+                self.outstanding_tasks.insert(item.id.clone());
+
+                let mut response = rpc::PopResponse::new();
+                response.set_id(item.id.to_string());
+                response.set_message(item.data);
+                response.set_hadResult(true);
+                response.set_refId(ref_id);
+                let mut wrapper = rpc::ResponseWrapper::new();
+                wrapper.set_pop(response);
+                send_reply(s, wrapper);
+            }
+            Ok(None) => {
+                let mut response = rpc::PopResponse::new();
+                response.set_hadResult(false);
+                response.set_refId(ref_id);
+                let mut wrapper = rpc::ResponseWrapper::new();
+                wrapper.set_pop(response);
+                send_reply(s, wrapper);
+            }
             Err(e) => {
                 eprintln!("Failed to pop message: {}", e);
-                reply_error(s);
+                reply_error(s, format!("Failed to pop message: {}", e), ref_id);
             }
         }
     }
 
-    fn acknowledge(&mut self, request: &rpc::AcknowledgeRequest) {}
+    fn acknowledge(&mut self, request: &rpc::AcknowledgeRequest, s: &mut TcpStream) {
+        let id = request.get_id();
+        let ref_id = request.get_refId();
+
+        match Uuid::parse_str(id) {
+            Ok(uuid) => {
+                let mut qs = &mut self.queue_server.to_owned();
+                match qs.acknowledge(uuid) {
+                    Ok(()) => {
+                        self.outstanding_tasks.remove(&uuid);
+
+                        let mut response = rpc::AcknowledgeResponse::new();
+                        response.set_refId(ref_id);
+                        let mut wrapper = rpc::ResponseWrapper::new();
+                        wrapper.set_acknowledge(response);
+                        match send_reply(s, wrapper) {
+                            Err(e) => {
+                                eprintln!("Failed to send acknowledge reply: {}", e);
+                            }
+                            _ => {}
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to acknowledge message: {}", e);
+                        reply_error(s, format!("Failed to acknowledge message: {}", e), ref_id);
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to parse id to UUID: {}", e);
+                reply_error(s, format!("Failed to parse id to UUID: {}", e), ref_id);
+            }
+        }
+    }
 
     fn enqueue(&mut self, request: &rpc::EnqueueRequest, s: &mut TcpStream) {
         let priority = request.get_priority();
         let message = request.get_message();
         let required_capabilities = request.get_requiredCapabilities();
+        let ref_id = request.get_refId();
 
         let prio = match priority {
             rpc::Priority::LOW => models::Priority::Low,
@@ -161,20 +227,28 @@ impl Client {
                 let mut response = rpc::ResponseWrapper::new();
                 let mut enqueue_response = rpc::EnqueueResponse::new();
                 enqueue_response.set_id(created.id.to_string());
+                enqueue_response.set_refId(ref_id);
                 response.set_enqueue(enqueue_response);
-                match reply_success(s, response) {
+                match send_reply(s, response) {
                     Err(e) => eprintln!("Failed to respond: {}", e),
                     Ok(()) => debug!("Responded successfully"),
                 };
             }
             Err(e) => {
                 eprintln!("Failed to enqueue message: {}", e);
-                reply_error(s);
+                reply_error(s, format!("Failed to enqueue message: {}", e), ref_id);
             }
         }
     }
 
-    fn drop_connection(mut self) {}
+    fn drop_connection(mut self) {
+        for id in self.outstanding_tasks {
+            match self.queue_server.fail(id) {
+                Err(e) => { eprintln!("Failed to fail task: {}", e) },
+                _ => {},
+            };
+        }
+    }
 
     pub fn handle_connection(mut self, mut s: TcpStream) {
         loop {
@@ -193,8 +267,10 @@ impl Client {
                         self.enqueue(enqueue_request, &mut s);
                     } else if message.has_acknowledge() {
                         let acknowledge_request = message.get_acknowledge();
+                        self.acknowledge(acknowledge_request, &mut s);
                     } else if message.has_pop() {
                         let pop_request = message.get_pop();
+                        self.pop(pop_request, &mut s);
                     }
                 }
                 Err(e) => {
