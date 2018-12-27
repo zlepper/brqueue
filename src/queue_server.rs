@@ -445,4 +445,22 @@ mod tests {
             assert_eq!(qs.pop(vec![], false).unwrap().unwrap().id, item.id);
         }
     }
+
+    mod priority {
+        use super::*;
+
+        #[test]
+        fn opholds_priority() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+
+            qs.enqueue("foo", Priority::High, vec![]).expect("Failed to enqueue");
+            qs.enqueue("bar", Priority::Low, vec![]).expect("Failed to enqueue");
+            qs.enqueue("baz", Priority::High, vec![]).expect("Failed to enqueue");
+
+            assert_eq!(qs.pop(vec![], false).unwrap().unwrap().data, "foo");
+            assert_eq!(qs.pop(vec![], false).unwrap().unwrap().data, "baz");
+            assert_eq!(qs.pop(vec![], false).unwrap().unwrap().data, "bar");
+        }
+    }
 }
