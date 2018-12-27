@@ -1,4 +1,6 @@
 extern crate bincode;
+#[macro_use]
+extern crate crossbeam;
 extern crate env_logger;
 extern crate futures;
 extern crate protobuf;

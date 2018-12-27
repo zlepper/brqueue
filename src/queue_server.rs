@@ -3,15 +3,17 @@ use std::collections::VecDeque;
 use std::convert;
 use std::fmt;
 use std::fs::{create_dir_all, File, OpenOptions};
+use std::io::BufWriter;
 use std::io::Error as IOError;
 use std::io::Write;
 use std::path;
 use std::sync::Arc;
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 
 use bincode::{deserialize, Error as BinCodeError, serialize};
+use crossbeam::channel::{bounded, Receiver, Sender, TrySendError};
 use log::{debug, error};
 use serde::Deserialize;
 use serde::Serialize;
@@ -23,7 +25,6 @@ use crate::models::QueueItem;
 use crate::models::Tags;
 
 use super::queue;
-use std::io::BufWriter;
 
 #[derive(Debug)]
 pub enum Error {
@@ -164,7 +165,7 @@ impl InternalQueueFileManager {
             // Write the data to the disk, and ensure the
             // content has been flushed to disk.
             file.write(&encoded_len)?;
-//            file.flush()?;
+            file.flush()?;
 
             Ok(())
         } else {
@@ -173,11 +174,15 @@ impl InternalQueueFileManager {
     }
 }
 
+
 #[derive(Clone)]
 pub struct QueueServer<T: Send + Clone> {
     queue: InternalQueueManager<T>,
     file_manager: InternalQueueFileManager,
-    waiting: Arc<Mutex<VecDeque<Sender<QueueItem<T>>>>>,
+    // Try writing to this to see if something can be send
+    waiting: Sender<QueueItem<T>>,
+    // Wait on this for push like queuing
+    wait_receive: Receiver<QueueItem<T>>,
     processing: Arc<Mutex<HashMap<Uuid, QueueItem<T>>>>,
 }
 
@@ -188,11 +193,13 @@ pub struct CreatedMessage {
 impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
     pub fn new_with_filename(filename: String) -> Result<QueueServer<T>, Error> {
         let file_manager = InternalQueueFileManager::new(filename)?;
+        let (sender, receiver) = bounded(0);
 
         return Ok(QueueServer {
             queue: InternalQueueManager::new(),
             file_manager,
-            waiting: Arc::new(Mutex::new(VecDeque::new())),
+            waiting: sender,
+            wait_receive: receiver,
             processing: Arc::new(Mutex::new(HashMap::new())),
         });
     }
@@ -202,7 +209,11 @@ impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
     }
 
     fn add_item_to_queue(&mut self, item: QueueItem<T>) -> Result<(), Error> {
-        self.queue.enqueue(item)
+        match self.waiting.try_send(item) {
+            Ok(()) => Ok(()),
+            Err(TrySendError::Full(item)) => self.queue.enqueue(item),
+            Err(_) => Err(Error::QueueCorrupted),
+        }
     }
 
     // Enqueues another item in the queue.
@@ -230,18 +241,30 @@ impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
         Ok(CreatedMessage { id })
     }
 
-    pub fn pop(
-        &mut self,
-        capabilities: Vec<String>,
-        wait_for_message: bool,
-    ) -> Result<Option<QueueItem<T>>, Error> {
-        match self.queue.pop(capabilities) {
+    fn pop_item(&mut self, capabilities: Vec<String>, wait_for_message: bool) -> Result<Option<QueueItem<T>>, Error> {
+        match self.queue.pop(capabilities.clone()) {
             Err(e) => Err(e),
             Ok(Some(entry)) => Ok(Some(entry)),
             Ok(None) => {
                 if wait_for_message {
-                    //                let (tx, rc) = mpsc::channel();
-                    Ok(None)
+                    loop {
+                        select! {
+                            recv(self.wait_receive) -> msg => {
+                                match msg {
+                                    Ok(item) => return Ok(Some(item)),
+                                    Err(_) => return Err(Error::QueueCorrupted),
+                                }
+                            },
+                            default(Duration::from_secs(1)) => {
+                                // Try to receive something from the queue again
+                                match self.queue.pop(capabilities.clone()) {
+                                    Err(e) => return Err(e),
+                                    Ok(Some(item)) => return Ok(Some(item)),
+                                    Ok(None) => {},
+                                }
+                            }
+                        }
+                    }
                 } else {
                     Ok(None)
                 }
@@ -249,52 +272,177 @@ impl<'de, T: Send + Clone + Serialize + Deserialize<'de>> QueueServer<T> {
         }
     }
 
-    pub fn acknowledge(id: Uuid) {}
+    pub fn pop(
+        &mut self,
+        capabilities: Vec<String>,
+        wait_for_message: bool,
+    ) -> Result<Option<QueueItem<T>>, Error> {
+        match self.pop_item(capabilities, wait_for_message) {
+            Err(e) => Err(e),
+            Ok(None) => Ok(None),
+            Ok(Some(item)) => {
+                if let Ok(mut waiting) = self.processing.lock() {
+                    waiting.insert(item.id.clone(), item.clone());
+                } else {
+                    return Err(Error::QueueCorrupted)
+                };
+                Ok(Some(item))
+            }
+        }
+    }
+
+    // Marks a task as completed
+    pub fn acknowledge(&mut self, id: Uuid) -> Result<(), Error> {
+        if let Ok(mut waiting) = self.processing.lock() {
+            waiting.remove(&id);
+            Ok(())
+        } else {
+            Err(Error::QueueCorrupted)
+        }
+    }
+
+    // Marks tasks as failed, and puts them back in the queue
+    pub fn fail(&mut self, id: Uuid) -> Result<(), Error> {
+        let item = match self.processing.lock() {
+            Ok(mut waiting) => waiting.remove(&id),
+            _ => return Err(Error::QueueCorrupted),
+        };
+
+        match item {
+            Some(item) => self.add_item_to_queue(item),
+            None => Ok(())
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::thread::spawn;
 
-    #[test]
-    fn enqueue_and_pop_with_wait_for_message() {
-        let mut qs = QueueServer::new_with_filename("storage/test1".to_string()).expect("Failed to create queue server");
+    use super::*;
 
-        qs.enqueue("foo", Priority::High, vec!["foo".to_string()]);
-        qs.enqueue("bar", Priority::High, vec!["bar".to_string()]);
+    const STORAGE_PATH: &'static str = "test_storage/test";
 
-        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "foo");
-        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "bar");
-    }
-
-    #[test]
-    fn enqueue_and_pop_without_wait_for_message() {
-        let mut qs = QueueServer::new_with_filename("storage/test2".to_string()).expect("Failed to create queue server");
-
-        qs.enqueue("foo", Priority::High, vec!["foo".to_string()]);
-        qs.enqueue("bar", Priority::High, vec!["bar".to_string()]);
-
-        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().unwrap().data, "foo");
-        assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().unwrap().data, "bar");
-    }
-
-    #[test]
-    #[ignore]
-    fn rough_benchmark() {
-        let mut qs = QueueServer::new_with_filename("storage/test3".to_string()).expect("Failed to create queue server");
-        let mut handles = Vec::new();
-        for i in 0..100 {
-            let mut q = qs.clone();
-            let handle = spawn(move || {
-                for j in 0..10000 {
-                    q.enqueue("foo", Priority::High, vec!["foo".to_string()]);
-                }
-            });
-            handles.push(handle);
+    fn setup() {
+        match std::fs::remove_dir_all(STORAGE_PATH) {
+            Ok(()) => {},
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {},
+            Err(e) => panic!(e),
         }
-        for h in handles {
-            h.join();
+    }
+
+    mod enqueue_and_pop {
+        use super::*;
+
+        #[test]
+        fn enqueue_and_pop_with_wait_for_message() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+
+            qs.enqueue("foo", Priority::High, vec!["foo".to_string()]);
+            qs.enqueue("bar", Priority::High, vec!["bar".to_string()]);
+
+            assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "foo");
+            assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "bar");
+
+            let mut q = qs.clone();
+
+            let h1 = spawn(move || {
+                thread::sleep_ms(50);
+                q.enqueue("baz", Priority::High, vec!["foo".to_string()]);
+            });
+
+            assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "baz");
+
+            h1.join().expect("Failed to join thread");
+        }
+
+        #[test]
+        fn enqueue_and_pop_with_long_wait() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+
+            let mut q = qs.clone();
+
+            let h1 = spawn(move || {
+                thread::sleep_ms(3000);
+                q.enqueue("baz", Priority::High, vec!["foo".to_string()]);
+            });
+
+            assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], true).unwrap().unwrap().data, "baz");
+
+            h1.join().expect("Failed to join thread");
+        }
+
+        #[test]
+        fn enqueue_and_pop_without_wait_for_message() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+
+            qs.enqueue("foo", Priority::High, vec!["foo".to_string()]);
+            qs.enqueue("bar", Priority::High, vec!["bar".to_string()]);
+
+            assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().unwrap().data, "foo");
+            assert_eq!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().unwrap().data, "bar");
+
+            assert!(qs.pop(vec!["foo".to_string(), "bar".to_string()], false).unwrap().is_none());
+        }
+
+        #[test]
+        #[ignore]
+        fn rough_benchmark() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+            let mut handles = Vec::new();
+            for i in 0..100 {
+                let mut q = qs.clone();
+                let handle = spawn(move || {
+                    for j in 0..10000 {
+                        q.enqueue("foo", Priority::High, vec!["foo".to_string()]);
+                    }
+                });
+                handles.push(handle);
+            }
+            for h in handles {
+                h.join();
+            }
+        }
+    }
+
+    mod acknowledge_and_fail {
+        use super::*;
+
+        #[test]
+        fn acknowledge_will_remove() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+
+            let id = qs.enqueue("foo", Priority::High, vec![]).expect("Failed to enqueue task");
+
+            let item = qs.pop(vec![], false).expect("Failed to pop item").expect("Not item received");
+
+            assert_eq!(item.id, id.id);
+
+            qs.acknowledge(id.id).expect("Failed to acknowledge task");
+
+            assert!(qs.pop(vec![], false).unwrap().is_none());
+        }
+
+        #[test]
+        fn fail_will_re_enqueue() {
+            setup();
+            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string()).expect("Failed to create queue server");
+
+
+            let id = qs.enqueue("foo", Priority::High, vec![]).expect("Failed to enqueue task");
+
+            let item = qs.pop(vec![], false).expect("Failed to pop item").expect("Not item received");
+
+            assert_eq!(item.id, id.id);
+
+            qs.fail(id.id).expect("Failed to fail task");
+
+            assert_eq!(qs.pop(vec![], false).unwrap().unwrap().id, item.id);
         }
     }
 }

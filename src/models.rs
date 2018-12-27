@@ -40,11 +40,6 @@ pub struct Tags {
 }
 
 impl Tags {
-    pub fn from(v: Vec<String>) -> Tags {
-        Tags {
-            inner: HashSet::from_iter(v),
-        }
-    }
 
     pub fn new() -> Tags {
         Tags {
@@ -62,5 +57,21 @@ impl Tags {
 
     pub fn is_superset(&self, other: &Tags) -> bool {
         return self.inner.is_superset(&other.inner);
+    }
+}
+
+impl std::convert::From<Vec<String>> for Tags {
+    fn from(v: Vec<String>) -> Tags {
+        Tags {
+            inner: HashSet::from_iter(v),
+        }
+    }
+}
+
+impl std::convert::From<Vec<&str>> for Tags {
+    fn from(v: Vec<&str>) -> Tags {
+        Tags {
+            inner: HashSet::from_iter(v.iter().map(|s| s.to_string())),
+        }
     }
 }

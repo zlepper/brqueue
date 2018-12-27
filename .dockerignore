@@ -6,3 +6,4 @@ build-linux.cmd
 *.iml
 Dockerfile
 storage/
+test_storage/
