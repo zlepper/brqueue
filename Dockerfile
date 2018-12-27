@@ -7,7 +7,8 @@ RUN apt-get update && apt-get install -y unzip \
     && rm -f $PROTOC_ZIP
 
 COPY . .
-
+RUN cargo test
+RUN cargo test --release -- --ignored
 RUN cargo build --release
 
 FROM debian
