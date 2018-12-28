@@ -6,12 +6,15 @@ RUN apt-get update && apt-get install -y unzip \
     && unzip -o $PROTOC_ZIP -d /usr/local bin/protoc \
     && rm -f $PROTOC_ZIP
 
-COPY . .
+COPY . /root/brqueue
+WORKDIR /root/brqueue
+# Run normal tests
 RUN cargo test
+# Run all the ignored tests in release mode, so they can run faster
 RUN cargo test --release -- --ignored
 RUN cargo build --release
 
 FROM debian
-COPY --from=builder /target/release/brqueue /bin/brqueue
+COPY --from=builder /root/brqueue/target/release/brqueue /bin/brqueue
 RUN chmod +x /bin/brqueue
 CMD ["/bin/brqueue"]

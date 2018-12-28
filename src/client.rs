@@ -6,6 +6,7 @@ use std::io::Read;
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
@@ -110,7 +111,7 @@ fn send_reply(s: &mut TcpStream, message: rpc::ResponseWrapper) -> Result<(), Er
 
     size.append(&mut data);
 
-    match s.write(&size) {
+    match s.write_all(&size) {
         Err(e) => Err(Error::ResponseError(e)),
         Ok(_) => Ok(()),
     }
@@ -131,14 +132,18 @@ fn reply_error(s: &mut TcpStream, message: String, ref_id: i32) {
 
 // One client corresponds to exactly one connection
 // to the server
+#[derive(Clone)]
 pub struct Client {
     queue_server: queue_server::QueueServer<Vec<u8>>,
-    outstanding_tasks: HashSet<Uuid>,
+    outstanding_tasks: Arc<Mutex<HashSet<Uuid>>>,
 }
 
 impl Client {
     pub fn new(queue_server: queue_server::QueueServer<Vec<u8>>) -> Client {
-        Client { queue_server, outstanding_tasks: HashSet::new() }
+        Client {
+            queue_server,
+            outstanding_tasks: Arc::new(Mutex::new(HashSet::new())),
+        }
     }
 
     fn pop(&mut self, request: &rpc::PopRequest) -> Result<rpc::ResponseWrapper, Error> {
@@ -149,7 +154,9 @@ impl Client {
 
         match qs.pop(capabilities.to_vec(), wait_for_messages) {
             Ok(Some(item)) => {
-                self.outstanding_tasks.insert(item.id.clone());
+                if let Ok(mut tasks) = self.outstanding_tasks.lock() {
+                    tasks.insert(item.id.clone());
+                }
 
                 let mut response = rpc::PopResponse::new();
                 response.set_id(item.id.to_string());
@@ -181,7 +188,9 @@ impl Client {
                 let mut qs = &mut self.queue_server.to_owned();
                 match qs.acknowledge(uuid) {
                     Ok(()) => {
-                        self.outstanding_tasks.remove(&uuid);
+                        if let Ok(mut tasks) = self.outstanding_tasks.lock() {
+                            tasks.remove(&uuid);
+                        }
 
                         let mut response = rpc::AcknowledgeResponse::new();
                         let mut wrapper = rpc::ResponseWrapper::new();
@@ -229,11 +238,13 @@ impl Client {
     }
 
     fn drop_connection(mut self) {
-        for id in self.outstanding_tasks {
-            match self.queue_server.fail(id) {
-                Err(e) => { eprintln!("Failed to fail task: {}", e) }
-                _ => {}
-            };
+        if let Ok(mut tasks) = self.outstanding_tasks.lock() {
+            for id in tasks.iter() {
+                match self.queue_server.fail(*id) {
+                    Err(e) => { eprintln!("Failed to fail task: {}", e) }
+                    _ => {}
+                };
+            }
         }
     }
 
@@ -241,44 +252,54 @@ impl Client {
         loop {
             match read_message(&mut s) {
                 Ok(data) => {
-                    let message = match parse_request(data) {
-                        Ok(message) => message,
+                    let mut s = match s.try_clone() {
+                        Ok(socket) => socket,
                         Err(e) => {
-                            eprintln!("Failed to parse message: {}", e);
-                            continue;
+                            eprintln!("Failed to clone socket, assuming this means it's dead..");
+                            return;
                         }
                     };
+                    let mut se = self.clone();
+                    thread::spawn(move || {
+                        let message = match parse_request(data) {
+                            Ok(message) => message,
+                            Err(e) => {
+                                eprintln!("Failed to parse message: {}", e);
+                                return;
+                            }
+                        };
 
-                    let ref_id = message.get_refId();
+                        let ref_id = message.get_refId();
 
-                    let result = if message.has_enqueue() {
-                        let enqueue_request = message.get_enqueue();
-                        self.enqueue(enqueue_request)
-                    } else if message.has_acknowledge() {
-                        let acknowledge_request = message.get_acknowledge();
-                        self.acknowledge(acknowledge_request)
-                    } else if message.has_pop() {
-                        let pop_request = message.get_pop();
-                        self.pop(pop_request)
-                    } else {
-                        Err(Error::RequestError("Unknown request".to_string()))
-                    };
+                        let result = if message.has_enqueue() {
+                            let enqueue_request = message.get_enqueue();
+                            se.enqueue(enqueue_request)
+                        } else if message.has_acknowledge() {
+                            let acknowledge_request = message.get_acknowledge();
+                            se.acknowledge(acknowledge_request)
+                        } else if message.has_pop() {
+                            let pop_request = message.get_pop();
+                            se.pop(pop_request)
+                        } else {
+                            Err(Error::RequestError("Unknown request".to_string()))
+                        };
 
-                    match result {
-                        Ok(mut wrapper) => {
-                            wrapper.set_refId(ref_id);
-                            match send_reply(&mut s, wrapper) {
-                                Err(e) => { eprintln!("Failed to send reply: {}", e) }
-                                _ => debug!("Response send without issue for ref_id '{}'", ref_id)
-                            };
+                        match result {
+                            Ok(mut wrapper) => {
+                                wrapper.set_refId(ref_id);
+                                match send_reply(&mut s, wrapper) {
+                                    Err(e) => { eprintln!("Failed to send reply: {}", e) }
+                                    _ => debug!("Response send without issue for ref_id '{}'", ref_id)
+                                };
+                            }
+                            Err(Error::RequestError(error_message)) => {
+                                reply_error(&mut s, error_message, ref_id);
+                            }
+                            Err(e) => {
+                                eprintln!("Unexpected error {}", e);
+                            }
                         }
-                        Err(Error::RequestError(error_message)) => {
-                            reply_error(&mut s, error_message, ref_id);
-                        }
-                        Err(e) => {
-                            eprintln!("Unexpected error {}", e);
-                        }
-                    }
+                    });
                 }
                 Err(e) => {
                     println!("Failed to read new message from client: {}", e);
