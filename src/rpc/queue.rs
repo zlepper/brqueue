@@ -27,7 +27,6 @@ pub struct EnqueueRequest {
     pub message: ::std::vec::Vec<u8>,
     pub priority: Priority,
     pub requiredCapabilities: ::protobuf::RepeatedField<::std::string::String>,
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -103,21 +102,6 @@ impl EnqueueRequest {
     pub fn get_requiredCapabilities(&self) -> &[::std::string::String] {
         &self.requiredCapabilities
     }
-
-    // int32 refId = 4;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
-    }
 }
 
 impl ::protobuf::Message for EnqueueRequest {
@@ -137,13 +121,6 @@ impl ::protobuf::Message for EnqueueRequest {
                 },
                 3 => {
                     ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.requiredCapabilities)?;
-                },
-                4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -166,9 +143,6 @@ impl ::protobuf::Message for EnqueueRequest {
         for value in &self.requiredCapabilities {
             my_size += ::protobuf::rt::string_size(3, &value);
         };
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(4, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -184,9 +158,6 @@ impl ::protobuf::Message for EnqueueRequest {
         for v in &self.requiredCapabilities {
             os.write_string(3, &v)?;
         };
-        if self.refId != 0 {
-            os.write_int32(4, self.refId)?;
-        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -244,11 +215,6 @@ impl ::protobuf::Message for EnqueueRequest {
                     |m: &EnqueueRequest| { &m.requiredCapabilities },
                     |m: &mut EnqueueRequest| { &mut m.requiredCapabilities },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &EnqueueRequest| { &m.refId },
-                    |m: &mut EnqueueRequest| { &mut m.refId },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<EnqueueRequest>(
                     "EnqueueRequest",
                     fields,
@@ -274,7 +240,6 @@ impl ::protobuf::Clear for EnqueueRequest {
         self.clear_message();
         self.clear_priority();
         self.clear_requiredCapabilities();
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -295,7 +260,6 @@ impl ::protobuf::reflect::ProtobufValue for EnqueueRequest {
 pub struct EnqueueResponse {
     // message fields
     pub id: ::std::string::String,
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -331,21 +295,6 @@ impl EnqueueResponse {
     pub fn get_id(&self) -> &str {
         &self.id
     }
-
-    // int32 refId = 2;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
-    }
 }
 
 impl ::protobuf::Message for EnqueueResponse {
@@ -359,13 +308,6 @@ impl ::protobuf::Message for EnqueueResponse {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.id)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -382,9 +324,6 @@ impl ::protobuf::Message for EnqueueResponse {
         if !self.id.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.id);
         }
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -393,9 +332,6 @@ impl ::protobuf::Message for EnqueueResponse {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
         if !self.id.is_empty() {
             os.write_string(1, &self.id)?;
-        }
-        if self.refId != 0 {
-            os.write_int32(2, self.refId)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -444,11 +380,6 @@ impl ::protobuf::Message for EnqueueResponse {
                     |m: &EnqueueResponse| { &m.id },
                     |m: &mut EnqueueResponse| { &mut m.id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &EnqueueResponse| { &m.refId },
-                    |m: &mut EnqueueResponse| { &mut m.refId },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<EnqueueResponse>(
                     "EnqueueResponse",
                     fields,
@@ -472,7 +403,6 @@ impl ::protobuf::Message for EnqueueResponse {
 impl ::protobuf::Clear for EnqueueResponse {
     fn clear(&mut self) {
         self.clear_id();
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -494,7 +424,6 @@ pub struct PopRequest {
     // message fields
     pub availableCapabilities: ::protobuf::RepeatedField<::std::string::String>,
     pub waitForMessage: bool,
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -544,21 +473,6 @@ impl PopRequest {
     pub fn get_waitForMessage(&self) -> bool {
         self.waitForMessage
     }
-
-    // int32 refId = 3;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
-    }
 }
 
 impl ::protobuf::Message for PopRequest {
@@ -580,13 +494,6 @@ impl ::protobuf::Message for PopRequest {
                     let tmp = is.read_bool()?;
                     self.waitForMessage = tmp;
                 },
-                3 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
-                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -605,9 +512,6 @@ impl ::protobuf::Message for PopRequest {
         if self.waitForMessage != false {
             my_size += 2;
         }
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(3, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -619,9 +523,6 @@ impl ::protobuf::Message for PopRequest {
         };
         if self.waitForMessage != false {
             os.write_bool(2, self.waitForMessage)?;
-        }
-        if self.refId != 0 {
-            os.write_int32(3, self.refId)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -675,11 +576,6 @@ impl ::protobuf::Message for PopRequest {
                     |m: &PopRequest| { &m.waitForMessage },
                     |m: &mut PopRequest| { &mut m.waitForMessage },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &PopRequest| { &m.refId },
-                    |m: &mut PopRequest| { &mut m.refId },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<PopRequest>(
                     "PopRequest",
                     fields,
@@ -704,7 +600,6 @@ impl ::protobuf::Clear for PopRequest {
     fn clear(&mut self) {
         self.clear_availableCapabilities();
         self.clear_waitForMessage();
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -727,7 +622,6 @@ pub struct PopResponse {
     pub hadResult: bool,
     pub message: ::std::vec::Vec<u8>,
     pub id: ::std::string::String,
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -804,21 +698,6 @@ impl PopResponse {
     pub fn get_id(&self) -> &str {
         &self.id
     }
-
-    // int32 refId = 4;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
-    }
 }
 
 impl ::protobuf::Message for PopResponse {
@@ -843,13 +722,6 @@ impl ::protobuf::Message for PopResponse {
                 2 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.id)?;
                 },
-                4 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
-                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -871,9 +743,6 @@ impl ::protobuf::Message for PopResponse {
         if !self.id.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.id);
         }
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(4, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -888,9 +757,6 @@ impl ::protobuf::Message for PopResponse {
         }
         if !self.id.is_empty() {
             os.write_string(2, &self.id)?;
-        }
-        if self.refId != 0 {
-            os.write_int32(4, self.refId)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -949,11 +815,6 @@ impl ::protobuf::Message for PopResponse {
                     |m: &PopResponse| { &m.id },
                     |m: &mut PopResponse| { &mut m.id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &PopResponse| { &m.refId },
-                    |m: &mut PopResponse| { &mut m.refId },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<PopResponse>(
                     "PopResponse",
                     fields,
@@ -979,7 +840,6 @@ impl ::protobuf::Clear for PopResponse {
         self.clear_hadResult();
         self.clear_message();
         self.clear_id();
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -1000,7 +860,6 @@ impl ::protobuf::reflect::ProtobufValue for PopResponse {
 pub struct AcknowledgeRequest {
     // message fields
     pub id: ::std::string::String,
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1036,21 +895,6 @@ impl AcknowledgeRequest {
     pub fn get_id(&self) -> &str {
         &self.id
     }
-
-    // int32 refId = 2;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
-    }
 }
 
 impl ::protobuf::Message for AcknowledgeRequest {
@@ -1064,13 +908,6 @@ impl ::protobuf::Message for AcknowledgeRequest {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.id)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1087,9 +924,6 @@ impl ::protobuf::Message for AcknowledgeRequest {
         if !self.id.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.id);
         }
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1098,9 +932,6 @@ impl ::protobuf::Message for AcknowledgeRequest {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
         if !self.id.is_empty() {
             os.write_string(1, &self.id)?;
-        }
-        if self.refId != 0 {
-            os.write_int32(2, self.refId)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1149,11 +980,6 @@ impl ::protobuf::Message for AcknowledgeRequest {
                     |m: &AcknowledgeRequest| { &m.id },
                     |m: &mut AcknowledgeRequest| { &mut m.id },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &AcknowledgeRequest| { &m.refId },
-                    |m: &mut AcknowledgeRequest| { &mut m.refId },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<AcknowledgeRequest>(
                     "AcknowledgeRequest",
                     fields,
@@ -1177,7 +1003,6 @@ impl ::protobuf::Message for AcknowledgeRequest {
 impl ::protobuf::Clear for AcknowledgeRequest {
     fn clear(&mut self) {
         self.clear_id();
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -1196,8 +1021,6 @@ impl ::protobuf::reflect::ProtobufValue for AcknowledgeRequest {
 
 #[derive(PartialEq, Clone, Default)]
 pub struct AcknowledgeResponse {
-    // message fields
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1206,21 +1029,6 @@ pub struct AcknowledgeResponse {
 impl AcknowledgeResponse {
     pub fn new() -> AcknowledgeResponse {
         ::std::default::Default::default()
-    }
-
-    // int32 refId = 1;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
     }
 }
 
@@ -1233,13 +1041,6 @@ impl ::protobuf::Message for AcknowledgeResponse {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
-                1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
-                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -1252,18 +1053,12 @@ impl ::protobuf::Message for AcknowledgeResponse {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if self.refId != 0 {
-            os.write_int32(1, self.refId)?;
-        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -1305,16 +1100,11 @@ impl ::protobuf::Message for AcknowledgeResponse {
         };
         unsafe {
             descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &AcknowledgeResponse| { &m.refId },
-                    |m: &mut AcknowledgeResponse| { &mut m.refId },
-                ));
+                let fields = ::std::vec::Vec::new();
                 ::protobuf::reflect::MessageDescriptor::new::<AcknowledgeResponse>(
                     "AcknowledgeResponse",
                     fields,
-                    file_descriptor_proto(),
+                    file_descriptor_proto()
                 )
             })
         }
@@ -1333,7 +1123,6 @@ impl ::protobuf::Message for AcknowledgeResponse {
 
 impl ::protobuf::Clear for AcknowledgeResponse {
     fn clear(&mut self) {
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -1352,8 +1141,6 @@ impl ::protobuf::reflect::ProtobufValue for AcknowledgeResponse {
 
 #[derive(PartialEq, Clone, Default)]
 pub struct ListFullQueueRequest {
-    // message fields
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1362,21 +1149,6 @@ pub struct ListFullQueueRequest {
 impl ListFullQueueRequest {
     pub fn new() -> ListFullQueueRequest {
         ::std::default::Default::default()
-    }
-
-    // int32 refId = 1;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
     }
 }
 
@@ -1389,13 +1161,6 @@ impl ::protobuf::Message for ListFullQueueRequest {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
-                1 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
-                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -1408,18 +1173,12 @@ impl ::protobuf::Message for ListFullQueueRequest {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
-        if self.refId != 0 {
-            os.write_int32(1, self.refId)?;
-        }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -1461,16 +1220,11 @@ impl ::protobuf::Message for ListFullQueueRequest {
         };
         unsafe {
             descriptor.get(|| {
-                let mut fields = ::std::vec::Vec::new();
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &ListFullQueueRequest| { &m.refId },
-                    |m: &mut ListFullQueueRequest| { &mut m.refId },
-                ));
+                let fields = ::std::vec::Vec::new();
                 ::protobuf::reflect::MessageDescriptor::new::<ListFullQueueRequest>(
                     "ListFullQueueRequest",
                     fields,
-                    file_descriptor_proto(),
+                    file_descriptor_proto()
                 )
             })
         }
@@ -1489,7 +1243,6 @@ impl ::protobuf::Message for ListFullQueueRequest {
 
 impl ::protobuf::Clear for ListFullQueueRequest {
     fn clear(&mut self) {
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -1510,7 +1263,6 @@ impl ::protobuf::reflect::ProtobufValue for ListFullQueueRequest {
 pub struct ListFullQueueResponse {
     // message fields
     pub segmentIndex: i32,
-    pub refId: i32,
     pub message: ::std::vec::Vec<u8>,
     pub id: ::std::string::String,
     pub finished: bool,
@@ -1537,21 +1289,6 @@ impl ListFullQueueResponse {
 
     pub fn get_segmentIndex(&self) -> i32 {
         self.segmentIndex
-    }
-
-    // int32 refId = 2;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
     }
 
     // bytes message = 3;
@@ -1638,13 +1375,6 @@ impl ::protobuf::Message for ListFullQueueResponse {
                     let tmp = is.read_int32()?;
                     self.segmentIndex = tmp;
                 },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
-                },
                 3 => {
                     ::protobuf::rt::read_singular_proto3_bytes_into(wire_type, is, &mut self.message)?;
                 },
@@ -1673,9 +1403,6 @@ impl ::protobuf::Message for ListFullQueueResponse {
         if self.segmentIndex != 0 {
             my_size += ::protobuf::rt::value_size(1, self.segmentIndex, ::protobuf::wire_format::WireTypeVarint);
         }
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         if !self.message.is_empty() {
             my_size += ::protobuf::rt::bytes_size(3, &self.message);
         }
@@ -1693,9 +1420,6 @@ impl ::protobuf::Message for ListFullQueueResponse {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
         if self.segmentIndex != 0 {
             os.write_int32(1, self.segmentIndex)?;
-        }
-        if self.refId != 0 {
-            os.write_int32(2, self.refId)?;
         }
         if !self.message.is_empty() {
             os.write_bytes(3, &self.message)?;
@@ -1753,11 +1477,6 @@ impl ::protobuf::Message for ListFullQueueResponse {
                     |m: &ListFullQueueResponse| { &m.segmentIndex },
                     |m: &mut ListFullQueueResponse| { &mut m.segmentIndex },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &ListFullQueueResponse| { &m.refId },
-                    |m: &mut ListFullQueueResponse| { &mut m.refId },
-                ));
                 fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBytes>(
                     "message",
                     |m: &ListFullQueueResponse| { &m.message },
@@ -1776,7 +1495,7 @@ impl ::protobuf::Message for ListFullQueueResponse {
                 ::protobuf::reflect::MessageDescriptor::new::<ListFullQueueResponse>(
                     "ListFullQueueResponse",
                     fields,
-                    file_descriptor_proto(),
+                    file_descriptor_proto()
                 )
             })
         }
@@ -1796,7 +1515,6 @@ impl ::protobuf::Message for ListFullQueueResponse {
 impl ::protobuf::Clear for ListFullQueueResponse {
     fn clear(&mut self) {
         self.clear_segmentIndex();
-        self.clear_refId();
         self.clear_message();
         self.clear_id();
         self.clear_finished();
@@ -1820,7 +1538,6 @@ impl ::protobuf::reflect::ProtobufValue for ListFullQueueResponse {
 pub struct ErrorResponse {
     // message fields
     pub message: ::std::string::String,
-    pub refId: i32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1856,21 +1573,6 @@ impl ErrorResponse {
     pub fn get_message(&self) -> &str {
         &self.message
     }
-
-    // int32 refId = 2;
-
-    pub fn clear_refId(&mut self) {
-        self.refId = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_refId(&mut self, v: i32) {
-        self.refId = v;
-    }
-
-    pub fn get_refId(&self) -> i32 {
-        self.refId
-    }
 }
 
 impl ::protobuf::Message for ErrorResponse {
@@ -1884,13 +1586,6 @@ impl ::protobuf::Message for ErrorResponse {
             match field_number {
                 1 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.message)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_int32()?;
-                    self.refId = tmp;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1907,9 +1602,6 @@ impl ::protobuf::Message for ErrorResponse {
         if !self.message.is_empty() {
             my_size += ::protobuf::rt::string_size(1, &self.message);
         }
-        if self.refId != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.refId, ::protobuf::wire_format::WireTypeVarint);
-        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1918,9 +1610,6 @@ impl ::protobuf::Message for ErrorResponse {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
         if !self.message.is_empty() {
             os.write_string(1, &self.message)?;
-        }
-        if self.refId != 0 {
-            os.write_int32(2, self.refId)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1969,11 +1658,6 @@ impl ::protobuf::Message for ErrorResponse {
                     |m: &ErrorResponse| { &m.message },
                     |m: &mut ErrorResponse| { &mut m.message },
                 ));
-                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
-                    "refId",
-                    |m: &ErrorResponse| { &m.refId },
-                    |m: &mut ErrorResponse| { &mut m.refId },
-                ));
                 ::protobuf::reflect::MessageDescriptor::new::<ErrorResponse>(
                     "ErrorResponse",
                     fields,
@@ -1997,7 +1681,6 @@ impl ::protobuf::Message for ErrorResponse {
 impl ::protobuf::Clear for ErrorResponse {
     fn clear(&mut self) {
         self.clear_message();
-        self.clear_refId();
         self.unknown_fields.clear();
     }
 }
@@ -2016,6 +1699,8 @@ impl ::protobuf::reflect::ProtobufValue for ErrorResponse {
 
 #[derive(PartialEq,Clone,Default)]
 pub struct RequestWrapper {
+    // message fields
+    pub refId: i32,
     // message oneof groups
     pub message: ::std::option::Option<RequestWrapper_oneof_message>,
     // special fields
@@ -2034,6 +1719,21 @@ pub enum RequestWrapper_oneof_message {
 impl RequestWrapper {
     pub fn new() -> RequestWrapper {
         ::std::default::Default::default()
+    }
+
+    // int32 refId = 10;
+
+    pub fn clear_refId(&mut self) {
+        self.refId = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_refId(&mut self, v: i32) {
+        self.refId = v;
+    }
+
+    pub fn get_refId(&self) -> i32 {
+        self.refId
     }
 
     // .EnqueueRequest enqueue = 1;
@@ -2261,6 +1961,13 @@ impl ::protobuf::Message for RequestWrapper {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
+                10 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int32()?;
+                    self.refId = tmp;
+                },
                 1 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
@@ -2297,6 +2004,9 @@ impl ::protobuf::Message for RequestWrapper {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if self.refId != 0 {
+            my_size += ::protobuf::rt::value_size(10, self.refId, ::protobuf::wire_format::WireTypeVarint);
+        }
         if let ::std::option::Option::Some(ref v) = self.message {
             match v {
                 &RequestWrapper_oneof_message::enqueue(ref v) => {
@@ -2323,6 +2033,9 @@ impl ::protobuf::Message for RequestWrapper {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if self.refId != 0 {
+            os.write_int32(10, self.refId)?;
+        }
         if let ::std::option::Option::Some(ref v) = self.message {
             match v {
                 &RequestWrapper_oneof_message::enqueue(ref v) => {
@@ -2389,6 +2102,11 @@ impl ::protobuf::Message for RequestWrapper {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
+                    "refId",
+                    |m: &RequestWrapper| { &m.refId },
+                    |m: &mut RequestWrapper| { &mut m.refId },
+                ));
                 fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, EnqueueRequest>(
                     "enqueue",
                     RequestWrapper::has_enqueue,
@@ -2431,6 +2149,7 @@ impl ::protobuf::Message for RequestWrapper {
 
 impl ::protobuf::Clear for RequestWrapper {
     fn clear(&mut self) {
+        self.clear_refId();
         self.clear_enqueue();
         self.clear_pop();
         self.clear_acknowledge();
@@ -2453,6 +2172,8 @@ impl ::protobuf::reflect::ProtobufValue for RequestWrapper {
 
 #[derive(PartialEq,Clone,Default)]
 pub struct ResponseWrapper {
+    // message fields
+    pub refId: i32,
     // message oneof groups
     pub message: ::std::option::Option<ResponseWrapper_oneof_message>,
     // special fields
@@ -2472,6 +2193,21 @@ pub enum ResponseWrapper_oneof_message {
 impl ResponseWrapper {
     pub fn new() -> ResponseWrapper {
         ::std::default::Default::default()
+    }
+
+    // int32 refId = 10;
+
+    pub fn clear_refId(&mut self) {
+        self.refId = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_refId(&mut self, v: i32) {
+        self.refId = v;
+    }
+
+    pub fn get_refId(&self) -> i32 {
+        self.refId
     }
 
     // .EnqueueResponse enqueue = 1;
@@ -2751,6 +2487,13 @@ impl ::protobuf::Message for ResponseWrapper {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
+                10 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int32()?;
+                    self.refId = tmp;
+                },
                 1 => {
                     if wire_type != ::protobuf::wire_format::WireTypeLengthDelimited {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
@@ -2793,6 +2536,9 @@ impl ::protobuf::Message for ResponseWrapper {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
+        if self.refId != 0 {
+            my_size += ::protobuf::rt::value_size(10, self.refId, ::protobuf::wire_format::WireTypeVarint);
+        }
         if let ::std::option::Option::Some(ref v) = self.message {
             match v {
                 &ResponseWrapper_oneof_message::enqueue(ref v) => {
@@ -2823,6 +2569,9 @@ impl ::protobuf::Message for ResponseWrapper {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream) -> ::protobuf::ProtobufResult<()> {
+        if self.refId != 0 {
+            os.write_int32(10, self.refId)?;
+        }
         if let ::std::option::Option::Some(ref v) = self.message {
             match v {
                 &ResponseWrapper_oneof_message::enqueue(ref v) => {
@@ -2894,6 +2643,11 @@ impl ::protobuf::Message for ResponseWrapper {
         unsafe {
             descriptor.get(|| {
                 let mut fields = ::std::vec::Vec::new();
+                fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeInt32>(
+                    "refId",
+                    |m: &ResponseWrapper| { &m.refId },
+                    |m: &mut ResponseWrapper| { &mut m.refId },
+                ));
                 fields.push(::protobuf::reflect::accessor::make_singular_message_accessor::<_, EnqueueResponse>(
                     "enqueue",
                     ResponseWrapper::has_enqueue,
@@ -2941,6 +2695,7 @@ impl ::protobuf::Message for ResponseWrapper {
 
 impl ::protobuf::Clear for ResponseWrapper {
     fn clear(&mut self) {
+        self.clear_refId();
         self.clear_enqueue();
         self.clear_pop();
         self.clear_acknowledge();
@@ -3018,41 +2773,36 @@ impl ::protobuf::reflect::ProtobufValue for Priority {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x15src/proto/queue.proto\"\x9b\x01\n\x0eEnqueueRequest\x12\x18\n\x07m\
+    \n\x15src/proto/queue.proto\"\x85\x01\n\x0eEnqueueRequest\x12\x18\n\x07m\
     essage\x18\x01\x20\x01(\x0cR\x07message\x12%\n\x08priority\x18\x02\x20\
     \x01(\x0e2\t.PriorityR\x08priority\x122\n\x14requiredCapabilities\x18\
-    \x03\x20\x03(\tR\x14requiredCapabilities\x12\x14\n\x05refId\x18\x04\x20\
-    \x01(\x05R\x05refId\"7\n\x0fEnqueueResponse\x12\x0e\n\x02id\x18\x01\x20\
-    \x01(\tR\x02id\x12\x14\n\x05refId\x18\x02\x20\x01(\x05R\x05refId\"\x80\
-    \x01\n\nPopRequest\x124\n\x15availableCapabilities\x18\x01\x20\x03(\tR\
-    \x15availableCapabilities\x12&\n\x0ewaitForMessage\x18\x02\x20\x01(\x08R\
-    \x0ewaitForMessage\x12\x14\n\x05refId\x18\x03\x20\x01(\x05R\x05refId\"k\
-    \n\x0bPopResponse\x12\x1c\n\thadResult\x18\x03\x20\x01(\x08R\thadResult\
-    \x12\x18\n\x07message\x18\x01\x20\x01(\x0cR\x07message\x12\x0e\n\x02id\
-    \x18\x02\x20\x01(\tR\x02id\x12\x14\n\x05refId\x18\x04\x20\x01(\x05R\x05r\
-    efId\":\n\x12AcknowledgeRequest\x12\x0e\n\x02id\x18\x01\x20\x01(\tR\x02i\
-    d\x12\x14\n\x05refId\x18\x02\x20\x01(\x05R\x05refId\"+\n\x13AcknowledgeR\
-    esponse\x12\x14\n\x05refId\x18\x01\x20\x01(\x05R\x05refId\",\n\x14ListFu\
-    llQueueRequest\x12\x14\n\x05refId\x18\x01\x20\x01(\x05R\x05refId\"\x97\
-    \x01\n\x15ListFullQueueResponse\x12\"\n\x0csegmentIndex\x18\x01\x20\x01(\
-    \x05R\x0csegmentIndex\x12\x14\n\x05refId\x18\x02\x20\x01(\x05R\x05refId\
-    \x12\x18\n\x07message\x18\x03\x20\x01(\x0cR\x07message\x12\x0e\n\x02id\
-    \x18\x04\x20\x01(\tR\x02id\x12\x1a\n\x08finished\x18\x05\x20\x01(\x08R\
-    \x08finished\"?\n\rErrorResponse\x12\x18\n\x07message\x18\x01\x20\x01(\t\
-    R\x07message\x12\x14\n\x05refId\x18\x02\x20\x01(\x05R\x05refId\"\xe1\x01\
-    \n\x0eRequestWrapper\x12+\n\x07enqueue\x18\x01\x20\x01(\x0b2\x0f.Enqueue\
-    RequestH\0R\x07enqueue\x12\x1f\n\x03pop\x18\x02\x20\x01(\x0b2\x0b.PopReq\
-    uestH\0R\x03pop\x127\n\x0backnowledge\x18\x03\x20\x01(\x0b2\x13.Acknowle\
-    dgeRequestH\0R\x0backnowledge\x12=\n\rlistFullQueue\x18\x04\x20\x01(\x0b\
-    2\x15.ListFullQueueRequestH\0R\rlistFullQueueB\t\n\x07message\"\x8e\x02\
-    \n\x0fResponseWrapper\x12,\n\x07enqueue\x18\x01\x20\x01(\x0b2\x10.Enqueu\
-    eResponseH\0R\x07enqueue\x12\x20\n\x03pop\x18\x02\x20\x01(\x0b2\x0c.PopR\
-    esponseH\0R\x03pop\x128\n\x0backnowledge\x18\x03\x20\x01(\x0b2\x14.Ackno\
-    wledgeResponseH\0R\x0backnowledge\x12&\n\x05error\x18\x04\x20\x01(\x0b2\
-    \x0e.ErrorResponseH\0R\x05error\x12>\n\rlistFullQueue\x18\x05\x20\x01(\
-    \x0b2\x16.ListFullQueueResponseH\0R\rlistFullQueueB\t\n\x07message*\x1d\
-    \n\x08Priority\x12\x07\n\x03LOW\x10\0\x12\x08\n\x04HIGH\x10\x01b\x06prot\
-    o3\
+    \x03\x20\x03(\tR\x14requiredCapabilities\"!\n\x0fEnqueueResponse\x12\x0e\
+    \n\x02id\x18\x01\x20\x01(\tR\x02id\"j\n\nPopRequest\x124\n\x15availableC\
+    apabilities\x18\x01\x20\x03(\tR\x15availableCapabilities\x12&\n\x0ewaitF\
+    orMessage\x18\x02\x20\x01(\x08R\x0ewaitForMessage\"U\n\x0bPopResponse\
+    \x12\x1c\n\thadResult\x18\x03\x20\x01(\x08R\thadResult\x12\x18\n\x07mess\
+    age\x18\x01\x20\x01(\x0cR\x07message\x12\x0e\n\x02id\x18\x02\x20\x01(\tR\
+    \x02id\"$\n\x12AcknowledgeRequest\x12\x0e\n\x02id\x18\x01\x20\x01(\tR\
+    \x02id\"\x15\n\x13AcknowledgeResponse\"\x16\n\x14ListFullQueueRequest\"\
+    \x81\x01\n\x15ListFullQueueResponse\x12\"\n\x0csegmentIndex\x18\x01\x20\
+    \x01(\x05R\x0csegmentIndex\x12\x18\n\x07message\x18\x03\x20\x01(\x0cR\
+    \x07message\x12\x0e\n\x02id\x18\x04\x20\x01(\tR\x02id\x12\x1a\n\x08finis\
+    hed\x18\x05\x20\x01(\x08R\x08finished\")\n\rErrorResponse\x12\x18\n\x07m\
+    essage\x18\x01\x20\x01(\tR\x07message\"\xf7\x01\n\x0eRequestWrapper\x12\
+    \x14\n\x05refId\x18\n\x20\x01(\x05R\x05refId\x12+\n\x07enqueue\x18\x01\
+    \x20\x01(\x0b2\x0f.EnqueueRequestH\0R\x07enqueue\x12\x1f\n\x03pop\x18\
+    \x02\x20\x01(\x0b2\x0b.PopRequestH\0R\x03pop\x127\n\x0backnowledge\x18\
+    \x03\x20\x01(\x0b2\x13.AcknowledgeRequestH\0R\x0backnowledge\x12=\n\rlis\
+    tFullQueue\x18\x04\x20\x01(\x0b2\x15.ListFullQueueRequestH\0R\rlistFullQ\
+    ueueB\t\n\x07message\"\xa4\x02\n\x0fResponseWrapper\x12\x14\n\x05refId\
+    \x18\n\x20\x01(\x05R\x05refId\x12,\n\x07enqueue\x18\x01\x20\x01(\x0b2\
+    \x10.EnqueueResponseH\0R\x07enqueue\x12\x20\n\x03pop\x18\x02\x20\x01(\
+    \x0b2\x0c.PopResponseH\0R\x03pop\x128\n\x0backnowledge\x18\x03\x20\x01(\
+    \x0b2\x14.AcknowledgeResponseH\0R\x0backnowledge\x12&\n\x05error\x18\x04\
+    \x20\x01(\x0b2\x0e.ErrorResponseH\0R\x05error\x12>\n\rlistFullQueue\x18\
+    \x05\x20\x01(\x0b2\x16.ListFullQueueResponseH\0R\rlistFullQueueB\t\n\x07\
+    message*\x1d\n\x08Priority\x12\x07\n\x03LOW\x10\0\x12\x08\n\x04HIGH\x10\
+    \x01B\x13Z\x07brqueue\xaa\x02\x07brqueueb\x06proto3\
 ";
 
 static mut file_descriptor_proto_lazy: ::protobuf::lazy::Lazy<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::lazy::Lazy {

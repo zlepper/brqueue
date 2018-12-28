@@ -1,4 +1,6 @@
 syntax = "proto3";
+option csharp_namespace = "brqueue";
+option go_package = "brqueue";
 
 enum Priority {
     LOW = 0;
@@ -13,15 +15,11 @@ message EnqueueRequest {
     Priority priority = 2;
     // What capabilities are required to handle the task
     repeated string requiredCapabilities = 3;
-
-    int32 refId = 4;
 }
 
 message EnqueueResponse {
     // The id of the created task
     string id = 1;
-
-    int32 refId = 2;
 }
 
 // Removes a single message from the queue
@@ -31,11 +29,6 @@ message PopRequest {
     // If the server should wait for a message to come in, before returning
     // with a response
     bool waitForMessage = 2;
-
-    // An optional reference id that will be passed back with
-    // the PopResponse, incase the client is multiplexing the
-    // socket
-    int32 refId = 3;
 }
 
 message PopResponse {
@@ -46,21 +39,15 @@ message PopResponse {
     // The id of the message
     // Should be returned with the acknowledge request
     string id = 2;
-    // The refId from the request
-    int32 refId = 4;
 }
 
 message AcknowledgeRequest {
     // The id of the message to acknowledge
     string id = 1;
-
-    int32 refId = 2;
 }
 
 // Returned when a message has been acknowledged
 message AcknowledgeResponse {
-    // The refId from the acknowledge request
-    int32 refId = 1;
 }
 
 // Write the full current queue back to the tpc stream
@@ -68,33 +55,29 @@ message AcknowledgeResponse {
 // of the messages hasn't been completed in the meantime, or
 // that new messages has arrived
 message ListFullQueueRequest {
-    int32 refId = 1;
 }
 
 // A partial response about a single message in the queue
 message ListFullQueueResponse {
     // The index of this message, useful if the client wants to order messages
     int32 segmentIndex = 1;
-    // The request refId
-    int32 refId = 2;
     // The actual message
     bytes message = 3;
     // The id of the message
     string id = 4;
     // If the listing has finished. When this is received, the
-    // rest of the fields doesn't make sense (expect refId of course)
+    // rest of the fields doesn't make sense
     bool finished = 5;
 }
 
 message ErrorResponse {
     // What went wrong
     string message = 1;
-    // The refId from the request that failed
-    int32 refId = 2;
 }
 
 // Wraps the requests for easier parsing on the socket layer
 message RequestWrapper {
+    int32 refId = 10;
     oneof message {
         EnqueueRequest enqueue = 1;
         PopRequest pop = 2;
@@ -104,6 +87,7 @@ message RequestWrapper {
 }
 
 message ResponseWrapper {
+    int32 refId = 10;
     oneof message {
         EnqueueResponse enqueue = 1;
         PopResponse pop = 2;

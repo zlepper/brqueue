@@ -37,6 +37,7 @@ enum Error {
     ParseError(ProtobufError),
     ResponseError(StdError),
     ConnectionReset,
+    RequestError(String),
 }
 
 impl std::fmt::Display for Error {
@@ -47,6 +48,7 @@ impl std::fmt::Display for Error {
             Error::ParseError(e) => write!(f, "ParseError: {}", e),
             Error::ResponseError(e) => write!(f, "ResponseError: {}", e),
             Error::ConnectionReset => write!(f, "Connection reset"),
+            Error::RequestError(s) => write!(f, "{}", s),
         }
     }
 }
@@ -117,9 +119,9 @@ fn send_reply(s: &mut TcpStream, message: rpc::ResponseWrapper) -> Result<(), Er
 fn reply_error(s: &mut TcpStream, message: String, ref_id: i32) {
     let mut response = rpc::ErrorResponse::new();
     response.set_message(message);
-    response.set_refId(ref_id);
     let mut wrapper = rpc::ResponseWrapper::new();
     wrapper.set_error(response);
+    wrapper.set_refId(ref_id);
 
     match send_reply(s, wrapper) {
         Ok(_) => {}
@@ -139,10 +141,9 @@ impl Client {
         Client { queue_server, outstanding_tasks: HashSet::new() }
     }
 
-    fn pop(&mut self, request: &rpc::PopRequest, s: &mut TcpStream) {
+    fn pop(&mut self, request: &rpc::PopRequest) -> Result<rpc::ResponseWrapper, Error> {
         let capabilities = request.get_availableCapabilities();
         let wait_for_messages = request.get_waitForMessage();
-        let ref_id = request.get_refId();
 
         let mut qs = &mut self.queue_server.to_owned();
 
@@ -154,29 +155,26 @@ impl Client {
                 response.set_id(item.id.to_string());
                 response.set_message(item.data);
                 response.set_hadResult(true);
-                response.set_refId(ref_id);
                 let mut wrapper = rpc::ResponseWrapper::new();
                 wrapper.set_pop(response);
-                send_reply(s, wrapper);
+                Ok(wrapper)
             }
             Ok(None) => {
                 let mut response = rpc::PopResponse::new();
                 response.set_hadResult(false);
-                response.set_refId(ref_id);
                 let mut wrapper = rpc::ResponseWrapper::new();
                 wrapper.set_pop(response);
-                send_reply(s, wrapper);
+                Ok(wrapper)
             }
             Err(e) => {
                 eprintln!("Failed to pop message: {}", e);
-                reply_error(s, format!("Failed to pop message: {}", e), ref_id);
+                Err(Error::RequestError(format!("Failed to pop message: {}", e)))
             }
         }
     }
 
-    fn acknowledge(&mut self, request: &rpc::AcknowledgeRequest, s: &mut TcpStream) {
+    fn acknowledge(&mut self, request: &rpc::AcknowledgeRequest) -> Result<rpc::ResponseWrapper, Error> {
         let id = request.get_id();
-        let ref_id = request.get_refId();
 
         match Uuid::parse_str(id) {
             Ok(uuid) => {
@@ -186,34 +184,27 @@ impl Client {
                         self.outstanding_tasks.remove(&uuid);
 
                         let mut response = rpc::AcknowledgeResponse::new();
-                        response.set_refId(ref_id);
                         let mut wrapper = rpc::ResponseWrapper::new();
                         wrapper.set_acknowledge(response);
-                        match send_reply(s, wrapper) {
-                            Err(e) => {
-                                eprintln!("Failed to send acknowledge reply: {}", e);
-                            }
-                            _ => {}
-                        }
+                        Ok(wrapper)
                     }
                     Err(e) => {
                         eprintln!("Failed to acknowledge message: {}", e);
-                        reply_error(s, format!("Failed to acknowledge message: {}", e), ref_id);
+                        Err(Error::RequestError(format!("Failed to acknowledge message: {}", e)))
                     }
                 }
             }
             Err(e) => {
                 eprintln!("Failed to parse id to UUID: {}", e);
-                reply_error(s, format!("Failed to parse id to UUID: {}", e), ref_id);
+                Err(Error::RequestError(format!("Failed to parse id to UUID: {}", e)))
             }
         }
     }
 
-    fn enqueue(&mut self, request: &rpc::EnqueueRequest, s: &mut TcpStream) {
+    fn enqueue(&mut self, request: &rpc::EnqueueRequest) -> Result<rpc::ResponseWrapper, Error> {
         let priority = request.get_priority();
         let message = request.get_message();
         let required_capabilities = request.get_requiredCapabilities();
-        let ref_id = request.get_refId();
 
         let prio = match priority {
             rpc::Priority::LOW => models::Priority::Low,
@@ -224,19 +215,15 @@ impl Client {
 
         match qs.enqueue(message.to_vec(), prio, required_capabilities.to_vec()) {
             Ok(created) => {
-                let mut response = rpc::ResponseWrapper::new();
-                let mut enqueue_response = rpc::EnqueueResponse::new();
-                enqueue_response.set_id(created.id.to_string());
-                enqueue_response.set_refId(ref_id);
-                response.set_enqueue(enqueue_response);
-                match send_reply(s, response) {
-                    Err(e) => eprintln!("Failed to respond: {}", e),
-                    Ok(()) => debug!("Responded successfully"),
-                };
+                let mut response = rpc::EnqueueResponse::new();
+                response.set_id(created.id.to_string());
+                let mut wrapper = rpc::ResponseWrapper::new();
+                wrapper.set_enqueue(response);
+                Ok(wrapper)
             }
             Err(e) => {
                 eprintln!("Failed to enqueue message: {}", e);
-                reply_error(s, format!("Failed to enqueue message: {}", e), ref_id);
+                Err(Error::RequestError(format!("Failed to enqueue message: {}", e)))
             }
         }
     }
@@ -244,8 +231,8 @@ impl Client {
     fn drop_connection(mut self) {
         for id in self.outstanding_tasks {
             match self.queue_server.fail(id) {
-                Err(e) => { eprintln!("Failed to fail task: {}", e) },
-                _ => {},
+                Err(e) => { eprintln!("Failed to fail task: {}", e) }
+                _ => {}
             };
         }
     }
@@ -262,15 +249,35 @@ impl Client {
                         }
                     };
 
-                    if message.has_enqueue() {
+                    let ref_id = message.get_refId();
+
+                    let result = if message.has_enqueue() {
                         let enqueue_request = message.get_enqueue();
-                        self.enqueue(enqueue_request, &mut s);
+                        self.enqueue(enqueue_request)
                     } else if message.has_acknowledge() {
                         let acknowledge_request = message.get_acknowledge();
-                        self.acknowledge(acknowledge_request, &mut s);
+                        self.acknowledge(acknowledge_request)
                     } else if message.has_pop() {
                         let pop_request = message.get_pop();
-                        self.pop(pop_request, &mut s);
+                        self.pop(pop_request)
+                    } else {
+                        Err(Error::RequestError("Unknown request".to_string()))
+                    };
+
+                    match result {
+                        Ok(mut wrapper) => {
+                            wrapper.set_refId(ref_id);
+                            match send_reply(&mut s, wrapper) {
+                                Err(e) => { eprintln!("Failed to send reply: {}", e) }
+                                _ => debug!("Response send without issue for ref_id '{}'", ref_id)
+                            };
+                        }
+                        Err(Error::RequestError(error_message)) => {
+                            reply_error(&mut s, error_message, ref_id);
+                        }
+                        Err(e) => {
+                            eprintln!("Unexpected error {}", e);
+                        }
                     }
                 }
                 Err(e) => {
