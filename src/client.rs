@@ -259,47 +259,44 @@ impl Client {
                             return;
                         }
                     };
-                    let mut se = self.clone();
-                    thread::spawn(move || {
-                        let message = match parse_request(data) {
-                            Ok(message) => message,
-                            Err(e) => {
-                                eprintln!("Failed to parse message: {}", e);
-                                return;
-                            }
-                        };
-
-                        let ref_id = message.get_refId();
-
-                        let result = if message.has_enqueue() {
-                            let enqueue_request = message.get_enqueue();
-                            se.enqueue(enqueue_request)
-                        } else if message.has_acknowledge() {
-                            let acknowledge_request = message.get_acknowledge();
-                            se.acknowledge(acknowledge_request)
-                        } else if message.has_pop() {
-                            let pop_request = message.get_pop();
-                            se.pop(pop_request)
-                        } else {
-                            Err(Error::RequestError("Unknown request".to_string()))
-                        };
-
-                        match result {
-                            Ok(mut wrapper) => {
-                                wrapper.set_refId(ref_id);
-                                match send_reply(&mut s, wrapper) {
-                                    Err(e) => { eprintln!("Failed to send reply: {}", e) }
-                                    _ => debug!("Response send without issue for ref_id '{}'", ref_id)
-                                };
-                            }
-                            Err(Error::RequestError(error_message)) => {
-                                reply_error(&mut s, error_message, ref_id);
-                            }
-                            Err(e) => {
-                                eprintln!("Unexpected error {}", e);
-                            }
+                    let message = match parse_request(data) {
+                        Ok(message) => message,
+                        Err(e) => {
+                            eprintln!("Failed to parse message: {}", e);
+                            return;
                         }
-                    });
+                    };
+
+                    let ref_id = message.get_refId();
+
+                    let result = if message.has_enqueue() {
+                        let enqueue_request = message.get_enqueue();
+                        self.enqueue(enqueue_request)
+                    } else if message.has_acknowledge() {
+                        let acknowledge_request = message.get_acknowledge();
+                        self.acknowledge(acknowledge_request)
+                    } else if message.has_pop() {
+                        let pop_request = message.get_pop();
+                        self.pop(pop_request)
+                    } else {
+                        Err(Error::RequestError("Unknown request".to_string()))
+                    };
+
+                    match result {
+                        Ok(mut wrapper) => {
+                            wrapper.set_refId(ref_id);
+                            match send_reply(&mut s, wrapper) {
+                                Err(e) => { eprintln!("Failed to send reply: {}", e) }
+                                _ => debug!("Response send without issue for ref_id '{}'", ref_id)
+                            };
+                        }
+                        Err(Error::RequestError(error_message)) => {
+                            reply_error(&mut s, error_message, ref_id);
+                        }
+                        Err(e) => {
+                            eprintln!("Unexpected error {}", e);
+                        }
+                    }
                 }
                 Err(e) => {
                     println!("Failed to read new message from client: {}", e);
