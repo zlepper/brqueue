@@ -1,7 +1,7 @@
 use core::borrow::BorrowMut;
 use std::collections::HashSet;
 use std::io::Cursor;
-use std::io::Error as StdError;
+use std::io::Error as IOError;
 use std::io::Read;
 use std::io::Write;
 use std::net::{TcpListener, TcpStream};
@@ -10,33 +10,22 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use log::debug;
 use protobuf::{Message, ProtobufError};
 use uuid::Uuid;
 
+use crate::binary::get_size;
+use crate::binary::get_size_array;
 use crate::models;
 
 use super::queue_server;
 use super::rpc;
 
-fn get_size(data: &[u8]) -> Result<i32, StdError> {
-    let mut reader = Cursor::new(data);
-
-    reader.read_i32::<LittleEndian>()
-}
-
-fn get_size_array(size: i32) -> Result<Vec<u8>, StdError> {
-    let mut writer = vec![];
-    writer.write_i32::<LittleEndian>(size)?;
-    Ok(writer)
-}
-
 enum Error {
-    ConnectionError(StdError),
-    ReadError(StdError),
+    ConnectionError(IOError),
+    ReadError(IOError),
     ParseError(ProtobufError),
-    ResponseError(StdError),
+    ResponseError(IOError),
     ConnectionReset,
     RequestError(String),
 }
@@ -180,7 +169,10 @@ impl Client {
         }
     }
 
-    fn acknowledge(&mut self, request: &rpc::AcknowledgeRequest) -> Result<rpc::ResponseWrapper, Error> {
+    fn acknowledge(
+        &mut self,
+        request: &rpc::AcknowledgeRequest,
+    ) -> Result<rpc::ResponseWrapper, Error> {
         let id = request.get_id();
 
         match Uuid::parse_str(id) {
@@ -199,13 +191,19 @@ impl Client {
                     }
                     Err(e) => {
                         eprintln!("Failed to acknowledge message: {}", e);
-                        Err(Error::RequestError(format!("Failed to acknowledge message: {}", e)))
+                        Err(Error::RequestError(format!(
+                            "Failed to acknowledge message: {}",
+                            e
+                        )))
                     }
                 }
             }
             Err(e) => {
                 eprintln!("Failed to parse id to UUID: {}", e);
-                Err(Error::RequestError(format!("Failed to parse id to UUID: {}", e)))
+                Err(Error::RequestError(format!(
+                    "Failed to parse id to UUID: {}",
+                    e
+                )))
             }
         }
     }
@@ -232,7 +230,10 @@ impl Client {
             }
             Err(e) => {
                 eprintln!("Failed to enqueue message: {}", e);
-                Err(Error::RequestError(format!("Failed to enqueue message: {}", e)))
+                Err(Error::RequestError(format!(
+                    "Failed to enqueue message: {}",
+                    e
+                )))
             }
         }
     }
@@ -241,7 +242,7 @@ impl Client {
         if let Ok(mut tasks) = self.outstanding_tasks.lock() {
             for id in tasks.iter() {
                 match self.queue_server.fail(*id) {
-                    Err(e) => { eprintln!("Failed to fail task: {}", e) }
+                    Err(e) => eprintln!("Failed to fail task: {}", e),
                     _ => {}
                 };
             }
@@ -286,8 +287,8 @@ impl Client {
                         Ok(mut wrapper) => {
                             wrapper.set_refId(ref_id);
                             match send_reply(&mut s, wrapper) {
-                                Err(e) => { eprintln!("Failed to send reply: {}", e) }
-                                _ => debug!("Response send without issue for ref_id '{}'", ref_id)
+                                Err(e) => eprintln!("Failed to send reply: {}", e),
+                                _ => debug!("Response send without issue for ref_id '{}'", ref_id),
                             };
                         }
                         Err(Error::RequestError(error_message)) => {

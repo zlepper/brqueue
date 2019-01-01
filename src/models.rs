@@ -3,13 +3,13 @@ use std::iter::FromIterator;
 
 use serde_derive::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum Priority {
     Low,
     High,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct QueueItem<T: Send + Clone> {
     pub data: T,
     pub required_tags: Tags,
@@ -34,13 +34,12 @@ impl<T: Send + Clone> QueueItem<T> {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub struct Tags {
     inner: HashSet<String>,
 }
 
 impl Tags {
-
     pub fn new() -> Tags {
         Tags {
             inner: HashSet::new(),

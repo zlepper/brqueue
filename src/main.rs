@@ -2,7 +2,6 @@ extern crate bincode;
 #[macro_use]
 extern crate crossbeam;
 extern crate env_logger;
-extern crate futures;
 extern crate protobuf;
 extern crate uuid;
 
@@ -10,7 +9,10 @@ use std::net::{TcpListener, TcpStream};
 use std::sync::Arc;
 use std::thread;
 
+mod binary;
 mod client;
+mod file_item_reader;
+mod internal_queue_file_manager;
 mod models;
 mod queue;
 mod queue_server;

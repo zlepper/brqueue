@@ -7,10 +7,6 @@ publish = false
 
 [dependencies]
 protobuf        = "2.2.0"
-futures         = "0.1.25"
-futures-cpupool = "0.1.8"
-tls-api            = "0.1.20"
-tls-api-native-tls = "0.1.20"
 uuid = { version = "0.7", features = ["v4", "serde"] }
 env_logger = "0.6.0"
 log = "0.4.6"
@@ -20,6 +16,7 @@ serde_derive = "1.0.82"
 bytes = "0.4.11"
 byteorder = "1.2.7"
 crossbeam = "0.6.0"
+take_mut = "0.2.2"
 
 [build-dependencies]
 protoc-rust = "2.2.0"
