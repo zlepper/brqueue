@@ -131,7 +131,7 @@ pub struct CreatedMessage {
 
 impl<T: Send + Clone + Serialize + DeserializeOwned> QueueServer<T> {
     pub fn new_with_filename(filename: String) -> Result<QueueServer<T>, Error> {
-        let file_manager = InternalQueueFileManager::new(filename)?;
+        let file_manager = InternalQueueFileManager::new(filename, true)?;
         let (sender, receiver) = bounded(0);
 
         return Ok(QueueServer {

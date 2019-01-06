@@ -1,17 +1,18 @@
 use std::collections::HashSet;
 use std::convert;
 use std::fmt;
-use std::fs::{create_dir_all, File, OpenOptions};
+use std::fs::{create_dir_all, File, OpenOptions, remove_file, rename};
 use std::io::{BufReader, BufWriter};
 use std::io::{Read, Write};
 use std::io::Error as IOError;
 use std::marker::PhantomData;
+use std::mem;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::sync::RwLock;
 
-use bincode::{deserialize, deserialize_from, Error as BinCodeError, serialize};
+use bincode::{deserialize, deserialize_from, Error as BinCodeError, serialize, serialize_into};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_derive::{Deserialize, Serialize};
@@ -32,6 +33,12 @@ pub enum Error {
 impl convert::From<IOError> for Error {
     fn from(e: IOError) -> Self {
         Error::IOError(e)
+    }
+}
+
+impl convert::From<BinCodeError> for Error {
+    fn from(e: BinCodeError) -> Self {
+        Error::FailedToSerializeWorkItem(e)
     }
 }
 
@@ -64,6 +71,8 @@ pub struct InternalQueueFileManager<T> where T: Send + Clone + Serialize + Deser
     file_prefix: PathBuf,
     open_files: Arc<RwLock<FileReferences>>,
     _pd: PhantomData<T>,
+    gc_lock: Arc<Mutex<()>>,
+    require_flush: bool,
 }
 
 pub struct StoredItems<T: Send + Clone> {
@@ -93,7 +102,7 @@ fn open_for_append(filename: &PathBuf) -> Result<FileReferences, Error> {
 }
 
 impl<T> InternalQueueFileManager<T> where T: Send + Clone + Serialize + DeserializeOwned {
-    pub fn new(filename_prefix: String) -> Result<InternalQueueFileManager<T>, Error> {
+    pub fn new(filename_prefix: String, require_flush: bool) -> Result<InternalQueueFileManager<T>, Error> {
         let p = Path::new(&filename_prefix.clone()).to_owned();
         let parent_folder = p.parent().expect("No parent for path");
         create_dir_all(parent_folder)?;
@@ -104,6 +113,8 @@ impl<T> InternalQueueFileManager<T> where T: Send + Clone + Serialize + Deserial
             file_prefix: p,
             open_files: Arc::new(RwLock::new(file_references)),
             _pd: PhantomData,
+            gc_lock: Arc::new(Mutex::new(())),
+            require_flush
         })
     }
 
@@ -127,7 +138,9 @@ impl<T> InternalQueueFileManager<T> where T: Send + Clone + Serialize + Deserial
                 // Write the data to the disk, and ensure the
                 // content has been flushed to disk.
                 file.write(&encoded)?;
-                file.flush()?;
+                if self.require_flush {
+                    file.flush()?;
+                }
 
                 Ok(())
             } else {
@@ -182,8 +195,129 @@ impl<T> InternalQueueFileManager<T> where T: Send + Clone + Serialize + Deserial
     }
 
     pub fn run_garbage_collection(&mut self) -> Result<(), Error> {
-        if let Ok(mut guard) = self.open_files.write() {
-            return Ok(())
+        if let Ok(lck) = self.gc_lock.lock() {
+            let gc_files_path = Path::new(&format!("{}_gc", self.file_prefix.to_string_lossy())).to_path_buf();
+
+            // Ensure we don't bite ourselves while running parallel
+            if let Ok(mut guard) = self.open_files.write() {
+                let mut temp_target = open_for_append(&gc_files_path)?;
+                *guard = temp_target;
+                // Automatically drop the existing target and the lock
+                // When this happen it will allow the queue to continue accepting items
+                // additionally it will close the normal target files so we can clean them up
+            }
+
+
+            let high_priority_file = self.get_file_path(HIGH_PRIORITY_EXTENSION);
+            let high_priority_backup = self.get_file_path(&format!("{}.bak", HIGH_PRIORITY_EXTENSION));
+            let low_priority_file = self.get_file_path(LOW_PRIORITY_EXTENSION);
+            let low_priority_backup = self.get_file_path(&format!("{}.bak", LOW_PRIORITY_EXTENSION));
+            let completed_file = self.get_file_path(COMPLETED_EXTENSION);
+
+            // Create a backup of the original files, so we don't risk losing data
+            rename(&high_priority_file, &high_priority_backup)?;
+            rename(&low_priority_file, &low_priority_backup)?;
+
+            // Read the completed ids, so we know which items we can remove as garbage
+            let completed_ids: HashSet<Uuid> = FileItemReader::new_from_file(&completed_file)?.collect();
+
+            // Actually write out the new items
+            // First for high priority
+            let mut target = BufWriter::new(File::create(high_priority_file)?);
+            for item in FileItemReader::new_from_file(&high_priority_backup)?.filter(|item: &QueueItem<T>| !completed_ids.contains(&item.id)) {
+                serialize_into(&mut target, &item)?;
+            };
+            target.flush()?;
+
+            // And then for low priority
+            target = BufWriter::new(File::create(low_priority_file)?);
+            for item in FileItemReader::new_from_file(&low_priority_backup)?.filter(|item: &QueueItem<T>| !completed_ids.contains(&item.id)) {
+                serialize_into(&mut target, &item)?;
+            };
+            target.flush()?;
+            drop(target);
+            drop(completed_ids);
+
+            // Remove the backup files, since the garbage collected files have now been saved.
+            remove_file(high_priority_backup)?;
+            remove_file(low_priority_backup)?;
+            remove_file(completed_file)?;
+
+            // Change back to writing to the normal files
+            if let Ok(mut guard) = self.open_files.write() {
+                let mut normal_target = open_for_append(&self.file_prefix)?;
+                *guard = normal_target;
+            }
+
+            let completed_gc_file = get_file_path(&gc_files_path, COMPLETED_EXTENSION);
+            let high_priority_gc_file = get_file_path(&gc_files_path, HIGH_PRIORITY_EXTENSION);
+            let low_priority_gc_file = get_file_path(&gc_files_path, LOW_PRIORITY_EXTENSION);
+
+            // Copy the data we got while we were garbage collecting into the normal files
+            // This will offset the order slightly, but it's the best we can do to stay active
+            // while GC is running
+            // And the best solution i could find that made rust compile the code...
+            if let Ok(mut guard) = self.open_files.read() {
+                // I know it's slightly in-efficient to deserialize and serialize, but i can't be bother to
+                // do the binary copy right now, in a way that doesn't break the target
+                // TODO: Binary copy this
+                if let Ok(mut completed) = guard.completed_file_index_file.lock() {
+                    for item in FileItemReader::<Uuid, File>::new_from_file(&completed_gc_file)? {
+                        serialize_into(&mut *completed, &item)?;
+                    };
+                    completed.flush()?;
+                } else {
+                    return Err(Error::MutexCorrupted);
+                };
+                if let Ok(mut high_priority) = guard.high_priority_file.lock() {
+                    for item in FileItemReader::<QueueItem<T>, File>::new_from_file(&high_priority_gc_file)? {
+                        serialize_into(&mut *high_priority, &item)?;
+                    };
+                    high_priority.flush()?;
+                } else {
+                    return Err(Error::MutexCorrupted);
+                };
+                if let Ok(mut low_priority) = guard.low_priority_file.lock() {
+                    for item in FileItemReader::<QueueItem<T>, File>::new_from_file(&low_priority_gc_file)? {
+                        serialize_into(&mut *low_priority, &item)?;
+                    };
+                    low_priority.flush()?;
+                } else {
+                    return Err(Error::MutexCorrupted);
+                };
+            }
+
+            // Lastly remove the temporary gc files
+            remove_file(&completed_gc_file)?;
+            remove_file(&high_priority_gc_file)?;
+            remove_file(&low_priority_gc_file)?;
+
+            // If we have come this far without failure it's apparently a miracle
+            Ok(())
+        } else {
+            Err(Error::MutexCorrupted)
+        }
+    }
+
+    pub fn flush_data(&mut self) -> Result<(), Error> {
+        if let Ok(mut guard) = self.open_files.read() {
+            if let Ok(mut file) = guard.high_priority_file.lock() {
+                file.flush();
+            } else {
+                return Err(Error::MutexCorrupted);
+            }
+            if let Ok(mut file) = guard.low_priority_file.lock() {
+                file.flush();
+            } else {
+                return Err(Error::MutexCorrupted);
+            }
+            if let Ok(mut file) = guard.completed_file_index_file.lock() {
+                file.flush();
+            } else {
+                return Err(Error::MutexCorrupted);
+            }
+        } else {
+            return Err(Error::MutexCorrupted);
         }
         Ok(())
     }
@@ -204,7 +338,7 @@ mod tests {
     fn can_save_item() {
         let storage_path = setup();
         let mut manager =
-            InternalQueueFileManager::new(storage_path).expect("Failed to create manager");
+            InternalQueueFileManager::new(storage_path, true).expect("Failed to create manager");
 
         manager
             .save_item(&QueueItem::new(
@@ -237,7 +371,7 @@ mod tests {
     fn can_save_and_read_across_threads() {
         let storage_path = setup();
         let mut manager =
-            InternalQueueFileManager::new(storage_path).expect("Failed to create manager");
+            InternalQueueFileManager::new(storage_path, true).expect("Failed to create manager");
 
         let mut threads = Vec::new();
 
@@ -263,7 +397,7 @@ mod tests {
     #[test]
     fn can_mark_items_as_completed() {
         let storage_path = setup();
-        let mut manager = InternalQueueFileManager::new(storage_path).unwrap();
+        let mut manager = InternalQueueFileManager::new(storage_path, true).unwrap();
 
         let item = QueueItem::new("foo".to_string(), Tags::new(), Priority::High);
 
@@ -281,10 +415,9 @@ mod tests {
 
     #[test]
     fn can_run_garbage_collection() {
-        setup();
         let storage_path = setup();
 
-        let mut manager = InternalQueueFileManager::new(storage_path.clone()).unwrap();
+        let mut manager = InternalQueueFileManager::new(storage_path.clone(), true).unwrap();
 
         let item1 = QueueItem::new("foo".to_string(), Tags::new(), Priority::High);
         let item2 = QueueItem::new("bar".to_string(), Tags::new(), Priority::High);
@@ -300,12 +433,72 @@ mod tests {
 
         drop(manager);
 
-        manager = InternalQueueFileManager::new(storage_path).unwrap();
+        manager = InternalQueueFileManager::new(storage_path, true).unwrap();
 
         let StoredItems { low_priority, high_priority } = manager.load_items().unwrap();
 
         assert_eq!(high_priority.len(), 2);
         assert_eq!(high_priority, vec![item2, item3]);
+    }
+
+    #[test]
+    fn can_add_items_will_gc_is_running_without_loss() {
+        let storage_path = setup();
+
+        let mut manager = InternalQueueFileManager::new(storage_path.clone(), true).unwrap();
+
+        // Add a bunch of items we don't really care about
+        for i in 0..100000 {
+            let item = QueueItem::new("foo".to_string(), Tags::new(), if i % 2 == 0 { Priority::High } else { Priority::Low });
+            manager.save_item(&item).expect("Failed to save trash item");
+            manager.mark_as_completed(&item.id);
+        }
+        // Create fake queue items
+        let mut fake_items = Vec::new();
+        for i in 0..5 {
+            fake_items.push(QueueItem::new("foo".to_string(), Tags::new(), if i % 2 != 0 { Priority::High } else { Priority::Low }));
+        }
+
+        let mut m = manager.clone();
+        let handle = std::thread::spawn(move || {
+            m.run_garbage_collection().expect("Garbage collection failed");
+        });
+
+
+        for item in &fake_items {
+            manager.save_item(&item).unwrap();
+        }
+
+        let hp_items_set: HashSet<Uuid> = fake_items.iter().filter(|item| item.priority == Priority::High).map(|item| item.id).collect();
+        let lp_items_set: HashSet<Uuid> = fake_items.iter().filter(|item| item.priority == Priority::Low).map(|item| item.id).collect();
+
+        // Wait for GC to finish
+        handle.join().unwrap();
+
+        let StoredItems { high_priority, low_priority } = manager.load_items().unwrap();
+
+        let hp_set: HashSet<Uuid> = high_priority.iter().map(|item| item.id).collect();
+        let lp_set: HashSet<Uuid> = low_priority.iter().map(|item| item.id).collect();
+        assert_eq!(hp_set, hp_items_set);
+        assert_eq!(lp_set, lp_items_set);
+    }
+
+    #[test]
+    #[ignore]
+    fn can_gc_many_items() {
+        let storage_path = setup();
+
+        let mut manager = InternalQueueFileManager::new(storage_path.clone(), false).unwrap();
+
+        // Add a bunch of items we don't really care about
+        // And we don't really care how long it takes
+        for i in 0..10000000 {
+            let item = QueueItem::new("foo".to_string(), Tags::new(), if i % 2 == 0 { Priority::High } else { Priority::Low });
+            manager.save_item(&item).expect("Failed to save trash item");
+            manager.mark_as_completed(&item.id);
+        }
+
+        manager.run_garbage_collection().unwrap();
     }
 
     mod how_does_the_lib_work {
