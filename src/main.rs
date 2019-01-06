@@ -17,6 +17,7 @@ mod models;
 mod queue;
 mod queue_server;
 mod rpc;
+mod test_helpers;
 
 fn handle_connection(mut s: TcpStream, qs: queue_server::QueueServer<Vec<u8>>) {
     thread::spawn(move || {

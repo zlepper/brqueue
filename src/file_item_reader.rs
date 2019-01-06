@@ -39,22 +39,22 @@ impl<T: Serialize + DeserializeOwned + Send + Clone, R: Read> Iterator for FileI
 
 #[cfg(test)]
 mod tests {
-    use std::fs::create_dir;
+    use std::fs::{create_dir, remove_dir_all};
     use std::io::Write;
 
     use bincode::serialize;
 
     use crate::models::{Priority, QueueItem, Tags};
+    use crate::test_helpers::setup_test_storage;
 
     use super::*;
 
     #[test]
     fn can_read() {
-        let filename = "test_storage/file_item_reader";
+        let root = setup_test_storage().unwrap();
+        let filename = format!("{}/file_item_reader", root);
 
-        create_dir("test_storage");
-
-        let mut file = File::create(filename).unwrap();
+        let mut file = File::create(filename.clone()).unwrap();
 
         let original_items = vec![
             QueueItem::new("foo".to_string(), Tags::new(), Priority::High),
@@ -69,7 +69,7 @@ mod tests {
         // Close the file so we don't conflict with the reader below
         drop(file);
 
-        let mut reader = FileItemReader::new_from_file(Path::new(filename)).unwrap();
+        let mut reader = FileItemReader::new_from_file(Path::new(&filename)).unwrap();
 
         let read_items: Vec<QueueItem<String>> = reader.collect();
 

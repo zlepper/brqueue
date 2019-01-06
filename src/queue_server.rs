@@ -9,6 +9,7 @@ use std::io::Write;
 use std::path;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
 
@@ -33,6 +34,7 @@ pub enum Error {
     IOError(IOError),
     MutexCorrupted,
     FailedToSerializeWorkItem(BinCodeError),
+    GarbageCollectionFailed
 }
 
 impl convert::From<IOError> for Error {
@@ -46,7 +48,8 @@ impl convert::From<InternalQueueFileManagerError> for Error {
         match e {
             InternalQueueFileManagerError::IOError(e) => Error::IOError(e),
             InternalQueueFileManagerError::FailedToSerializeWorkItem(e) => Error::FailedToSerializeWorkItem(e),
-            InternalQueueFileManagerError::MutexCorrupted => Error::MutexCorrupted
+            InternalQueueFileManagerError::MutexCorrupted => Error::MutexCorrupted,
+            InternalQueueFileManagerError::GarbageCollectionFailed => Error::GarbageCollectionFailed,
         }
     }
 }
@@ -61,7 +64,8 @@ impl fmt::Display for Error {
             Error::MutexCorrupted => write!(f, "File mutex corrupted"),
             Error::FailedToSerializeWorkItem(e) => {
                 write!(f, "Failed to serialize work item: {}", e)
-            }
+            },
+            Error::GarbageCollectionFailed => write!(f, "Garbage collection failed")
         }
     }
 }
@@ -113,7 +117,7 @@ impl<T: Send + Clone> InternalQueueManager<T> {
 #[derive(Clone)]
 pub struct QueueServer<T: Send + Clone + Serialize + DeserializeOwned> {
     queue: InternalQueueManager<T>,
-    file_manager: InternalQueueFileManager<T>,
+    file_manager: Arc<RwLock<InternalQueueFileManager<T>>>,
     // Try writing to this to see if something can be send
     waiting: Sender<QueueItem<T>>,
     // Wait on this for push like queuing
@@ -132,7 +136,7 @@ impl<T: Send + Clone + Serialize + DeserializeOwned> QueueServer<T> {
 
         return Ok(QueueServer {
             queue: InternalQueueManager::new(),
-            file_manager,
+            file_manager: Arc::new(RwLock::new(file_manager)),
             waiting: sender,
             wait_receive: receiver,
             processing: Arc::new(Mutex::new(HashMap::new())),
@@ -161,9 +165,13 @@ impl<T: Send + Clone + Serialize + DeserializeOwned> QueueServer<T> {
     ) -> Result<CreatedMessage, Error> {
         let item = QueueItem::new(message, Tags::from(required_capabilities), priority);
 
-        match self.file_manager.save_item(&item) {
-            Err(e) => return Err(e.into()),
-            _ => debug!("Item saved to disk without issues"),
+        if let Ok(mut manager) = self.file_manager.read() {
+            match manager.save_item(&item) {
+                Err(e) => return Err(e.into()),
+                _ => debug!("Item saved to disk without issues"),
+            }
+        } else {
+            return Err(Error::MutexCorrupted);
         }
 
         let id = item.id.clone();
@@ -258,16 +266,12 @@ impl<T: Send + Clone + Serialize + DeserializeOwned> QueueServer<T> {
 mod tests {
     use std::thread::spawn;
 
+    use crate::test_helpers::setup_test_storage;
+
     use super::*;
 
-    const STORAGE_PATH: &'static str = "test_storage/test";
-
-    fn setup() {
-        match std::fs::remove_dir_all(STORAGE_PATH) {
-            Ok(()) => {}
-            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => panic!(e),
-        }
+    fn setup() -> String {
+        format!("{}test", setup_test_storage().unwrap())
     }
 
     mod enqueue_and_pop {
@@ -275,8 +279,8 @@ mod tests {
 
         #[test]
         fn enqueue_and_pop_with_wait_for_message() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
 
             qs.enqueue("foo".to_string(), Priority::High, vec!["foo".to_string()]);
@@ -318,8 +322,8 @@ mod tests {
         #[test]
         #[ignore]
         fn enqueue_and_pop_with_long_wait() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
 
             let mut q = qs.clone();
@@ -342,8 +346,8 @@ mod tests {
 
         #[test]
         fn enqueue_and_pop_without_wait_for_message() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
 
             qs.enqueue("foo".to_string(), Priority::High, vec!["foo".to_string()]);
@@ -373,8 +377,8 @@ mod tests {
         #[test]
         #[ignore]
         fn rough_benchmark() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
             let mut handles = Vec::new();
             for i in 0..100 {
@@ -397,8 +401,8 @@ mod tests {
 
         #[test]
         fn acknowledge_will_remove() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
 
             let id = qs
@@ -419,8 +423,8 @@ mod tests {
 
         #[test]
         fn fail_will_re_enqueue() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
 
             let id = qs
@@ -445,8 +449,8 @@ mod tests {
 
         #[test]
         fn opholds_priority() {
-            setup();
-            let mut qs = QueueServer::new_with_filename(STORAGE_PATH.to_string())
+            let storage_path = setup();
+            let mut qs = QueueServer::new_with_filename(storage_path)
                 .expect("Failed to create queue server");
 
             qs.enqueue("foo".to_string(), Priority::High, vec![])

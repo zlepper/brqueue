@@ -26,6 +26,7 @@ pub enum Error {
     IOError(IOError),
     FailedToSerializeWorkItem(BinCodeError),
     MutexCorrupted,
+    GarbageCollectionFailed
 }
 
 impl convert::From<IOError> for Error {
@@ -43,7 +44,8 @@ impl fmt::Display for Error {
             Error::MutexCorrupted => write!(f, "File mutex corrupted"),
             Error::FailedToSerializeWorkItem(e) => {
                 write!(f, "Failed to serialize work item: {}", e)
-            }
+            },
+            Error::GarbageCollectionFailed => write!(f, "Garbage collection failed")
         }
     }
 }
@@ -138,7 +140,7 @@ impl<T> InternalQueueFileManager<T> where T: Send + Clone + Serialize + Deserial
 
     pub fn load_items(&mut self) -> Result<StoredItems<T>, Error>
     {
-        if let Ok(mut guard) = self.open_files.write() {
+        if let Ok(mut guard) = self.open_files.read() {
             // Load the completed ids
             let completed_ids: HashSet<Uuid> =
                 FileItemReader::new_from_file(&self.get_file_path(COMPLETED_EXTENSION))?.collect();
@@ -158,32 +160,51 @@ impl<T> InternalQueueFileManager<T> where T: Send + Clone + Serialize + Deserial
             Err(Error::MutexCorrupted)
         }
     }
+
+    pub fn mark_as_completed(&mut self, id: &Uuid) -> Result<(), Error> {
+        if let Ok(mut references) = self.open_files.read() {
+            if let Ok(mut completed) = references.completed_file_index_file.lock() {
+                let encoded = match serialize(id) {
+                    Err(e) => return Err(Error::FailedToSerializeWorkItem(e)),
+                    Ok(encoded) => encoded,
+                };
+
+                completed.write(&encoded)?;
+                completed.flush()?;
+
+                Ok(())
+            } else {
+                Err(Error::MutexCorrupted)
+            }
+        } else {
+            Err(Error::MutexCorrupted)
+        }
+    }
+
+    pub fn run_garbage_collection(&mut self) -> Result<(), Error> {
+        if let Ok(mut guard) = self.open_files.write() {
+            return Ok(())
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use bincode::{deserialize_from, serialize};
-
     use crate::models::{QueueItem, Tags};
+    use crate::test_helpers::setup_test_storage;
 
     use super::*;
 
-    const STORAGE_PATH: &'static str = "test_storage/test";
-
-    fn setup() {
-        match std::fs::remove_dir_all(STORAGE_PATH) {
-            Ok(()) => {}
-            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => panic!(e),
-        }
-        std::fs::create_dir_all("test_storage").unwrap();
+    fn setup() -> String {
+        format!("{}_test", setup_test_storage().unwrap())
     }
 
     #[test]
     fn can_save_item() {
-        setup();
+        let storage_path = setup();
         let mut manager =
-            InternalQueueFileManager::new(STORAGE_PATH.to_string()).expect("Failed to create manager");
+            InternalQueueFileManager::new(storage_path).expect("Failed to create manager");
 
         manager
             .save_item(&QueueItem::new(
@@ -214,9 +235,9 @@ mod tests {
 
     #[test]
     fn can_save_and_read_across_threads() {
-        setup();
+        let storage_path = setup();
         let mut manager =
-            InternalQueueFileManager::new(STORAGE_PATH.to_string()).expect("Failed to create manager");
+            InternalQueueFileManager::new(storage_path).expect("Failed to create manager");
 
         let mut threads = Vec::new();
 
@@ -239,10 +260,58 @@ mod tests {
         }
     }
 
-    fn can_run_garbage_collection() {}
+    #[test]
+    fn can_mark_items_as_completed() {
+        let storage_path = setup();
+        let mut manager = InternalQueueFileManager::new(storage_path).unwrap();
+
+        let item = QueueItem::new("foo".to_string(), Tags::new(), Priority::High);
+
+        manager.save_item(&item).unwrap();
+        manager.save_item(&QueueItem::new("bar".to_string(), Tags::new(), Priority::High)).unwrap();
+
+        manager.mark_as_completed(&item.id).unwrap();
+
+        let StoredItems { high_priority, low_priority } = manager.load_items().unwrap();
+
+        assert_eq!(high_priority.len(), 1);
+        assert_eq!(low_priority.len(), 0);
+        assert_eq!(high_priority.get(0).unwrap().data, "bar".to_string());
+    }
+
+    #[test]
+    fn can_run_garbage_collection() {
+        setup();
+        let storage_path = setup();
+
+        let mut manager = InternalQueueFileManager::new(storage_path.clone()).unwrap();
+
+        let item1 = QueueItem::new("foo".to_string(), Tags::new(), Priority::High);
+        let item2 = QueueItem::new("bar".to_string(), Tags::new(), Priority::High);
+        let item3 = QueueItem::new("baz".to_string(), Tags::new(), Priority::High);
+
+        manager.save_item(&item1).unwrap();
+        manager.save_item(&item2).unwrap();
+        manager.save_item(&item3).unwrap();
+
+        manager.mark_as_completed(&item1.id).unwrap();
+
+        manager.run_garbage_collection().unwrap();
+
+        drop(manager);
+
+        manager = InternalQueueFileManager::new(storage_path).unwrap();
+
+        let StoredItems { low_priority, high_priority } = manager.load_items().unwrap();
+
+        assert_eq!(high_priority.len(), 2);
+        assert_eq!(high_priority, vec![item2, item3]);
+    }
 
     mod how_does_the_lib_work {
         use std::io::Cursor;
+
+        use bincode::{deserialize_from, serialize};
 
         use crate::models::{QueueItem, Tags};
 
