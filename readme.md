@@ -17,5 +17,5 @@ What makes BRQueue so special from other queues that you have tried?
 You can either make your own client (Description on how TODO)
 Or use one of the premade clients. 
 
-* (Go)[https://github.com/zlepper/go-brqueue]
-* (C#)[https://github.com/zlepper/brqueue.net]
+* [Go](https://github.com/zlepper/go-brqueue)
+* [C#](https://github.com/zlepper/brqueue.net)
