@@ -7,6 +7,18 @@ enum Priority {
     HIGH = 1;
 }
 
+// Authenticates the single connection
+message AuthenticateRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message AuthenticateResponse {
+    // True if the authentication was successful,
+    // false otherwise
+    bool success = 1;
+}
+
 // Puts a new message in the queue
 message EnqueueRequest {
     // The actual task to enqueue
@@ -50,26 +62,6 @@ message AcknowledgeRequest {
 message AcknowledgeResponse {
 }
 
-// Write the full current queue back to the tpc stream
-// As the response is not instant, it doesn't gaurantee that some
-// of the messages hasn't been completed in the meantime, or
-// that new messages has arrived
-message ListFullQueueRequest {
-}
-
-// A partial response about a single message in the queue
-message ListFullQueueResponse {
-    // The index of this message, useful if the client wants to order messages
-    int32 segmentIndex = 1;
-    // The actual message
-    bytes message = 3;
-    // The id of the message
-    string id = 4;
-    // If the listing has finished. When this is received, the
-    // rest of the fields doesn't make sense
-    bool finished = 5;
-}
-
 message ErrorResponse {
     // What went wrong
     string message = 1;
@@ -82,7 +74,7 @@ message RequestWrapper {
         EnqueueRequest enqueue = 1;
         PopRequest pop = 2;
         AcknowledgeRequest acknowledge = 3;
-        ListFullQueueRequest listFullQueue = 4;
+        AuthenticateRequest authenticate = 6;
     }
 }
 
@@ -94,6 +86,6 @@ message ResponseWrapper {
         AcknowledgeResponse acknowledge = 3;
         // If something went wrong
         ErrorResponse error = 4;
-        ListFullQueueResponse listFullQueue = 5;
+        AuthenticateResponse authenticate = 6;
     }
 }

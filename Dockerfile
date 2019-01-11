@@ -10,7 +10,9 @@ COPY . /root/brqueue
 WORKDIR /root/brqueue
 # Run normal tests
 RUN cargo test
-# Run all the ignored tests in release mode, so they can run faster
+# Run all tests in release mode, so they can run faster, and so we can
+# Ensure that everything also works in release mode.
+RUN cargo test --release
 RUN cargo test --release -- --ignored
 RUN cargo build --release
 

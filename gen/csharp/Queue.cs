@@ -24,42 +24,42 @@ namespace brqueue {
     static QueueReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "CgtxdWV1ZS5wcm90byJcCg5FbnF1ZXVlUmVxdWVzdBIPCgdtZXNzYWdlGAEg",
-            "ASgMEhsKCHByaW9yaXR5GAIgASgOMgkuUHJpb3JpdHkSHAoUcmVxdWlyZWRD",
-            "YXBhYmlsaXRpZXMYAyADKAkiHQoPRW5xdWV1ZVJlc3BvbnNlEgoKAmlkGAEg",
-            "ASgJIkMKClBvcFJlcXVlc3QSHQoVYXZhaWxhYmxlQ2FwYWJpbGl0aWVzGAEg",
-            "AygJEhYKDndhaXRGb3JNZXNzYWdlGAIgASgIIj0KC1BvcFJlc3BvbnNlEhEK",
-            "CWhhZFJlc3VsdBgDIAEoCBIPCgdtZXNzYWdlGAEgASgMEgoKAmlkGAIgASgJ",
-            "IiAKEkFja25vd2xlZGdlUmVxdWVzdBIKCgJpZBgBIAEoCSIVChNBY2tub3ds",
-            "ZWRnZVJlc3BvbnNlIhYKFExpc3RGdWxsUXVldWVSZXF1ZXN0IlwKFUxpc3RG",
-            "dWxsUXVldWVSZXNwb25zZRIUCgxzZWdtZW50SW5kZXgYASABKAUSDwoHbWVz",
-            "c2FnZRgDIAEoDBIKCgJpZBgEIAEoCRIQCghmaW5pc2hlZBgFIAEoCCIgCg1F",
-            "cnJvclJlc3BvbnNlEg8KB21lc3NhZ2UYASABKAkixgEKDlJlcXVlc3RXcmFw",
-            "cGVyEg0KBXJlZklkGAogASgFEiIKB2VucXVldWUYASABKAsyDy5FbnF1ZXVl",
-            "UmVxdWVzdEgAEhoKA3BvcBgCIAEoCzILLlBvcFJlcXVlc3RIABIqCgthY2tu",
-            "b3dsZWRnZRgDIAEoCzITLkFja25vd2xlZGdlUmVxdWVzdEgAEi4KDWxpc3RG",
-            "dWxsUXVldWUYBCABKAsyFS5MaXN0RnVsbFF1ZXVlUmVxdWVzdEgAQgkKB21l",
-            "c3NhZ2Ui7AEKD1Jlc3BvbnNlV3JhcHBlchINCgVyZWZJZBgKIAEoBRIjCgdl",
-            "bnF1ZXVlGAEgASgLMhAuRW5xdWV1ZVJlc3BvbnNlSAASGwoDcG9wGAIgASgL",
-            "MgwuUG9wUmVzcG9uc2VIABIrCgthY2tub3dsZWRnZRgDIAEoCzIULkFja25v",
-            "d2xlZGdlUmVzcG9uc2VIABIfCgVlcnJvchgEIAEoCzIOLkVycm9yUmVzcG9u",
-            "c2VIABIvCg1saXN0RnVsbFF1ZXVlGAUgASgLMhYuTGlzdEZ1bGxRdWV1ZVJl",
-            "c3BvbnNlSABCCQoHbWVzc2FnZSodCghQcmlvcml0eRIHCgNMT1cQABIICgRI",
-            "SUdIEAFCE1oHYnJxdWV1ZaoCB2JycXVldWViBnByb3RvMw=="));
+            "CgtxdWV1ZS5wcm90byI5ChNBdXRoZW50aWNhdGVSZXF1ZXN0EhAKCHVzZXJu",
+            "YW1lGAEgASgJEhAKCHBhc3N3b3JkGAIgASgJIicKFEF1dGhlbnRpY2F0ZVJl",
+            "c3BvbnNlEg8KB3N1Y2Nlc3MYASABKAgiXAoORW5xdWV1ZVJlcXVlc3QSDwoH",
+            "bWVzc2FnZRgBIAEoDBIbCghwcmlvcml0eRgCIAEoDjIJLlByaW9yaXR5EhwK",
+            "FHJlcXVpcmVkQ2FwYWJpbGl0aWVzGAMgAygJIh0KD0VucXVldWVSZXNwb25z",
+            "ZRIKCgJpZBgBIAEoCSJDCgpQb3BSZXF1ZXN0Eh0KFWF2YWlsYWJsZUNhcGFi",
+            "aWxpdGllcxgBIAMoCRIWCg53YWl0Rm9yTWVzc2FnZRgCIAEoCCI9CgtQb3BS",
+            "ZXNwb25zZRIRCgloYWRSZXN1bHQYAyABKAgSDwoHbWVzc2FnZRgBIAEoDBIK",
+            "CgJpZBgCIAEoCSIgChJBY2tub3dsZWRnZVJlcXVlc3QSCgoCaWQYASABKAki",
+            "FQoTQWNrbm93bGVkZ2VSZXNwb25zZSIgCg1FcnJvclJlc3BvbnNlEg8KB21l",
+            "c3NhZ2UYASABKAkixAEKDlJlcXVlc3RXcmFwcGVyEg0KBXJlZklkGAogASgF",
+            "EiIKB2VucXVldWUYASABKAsyDy5FbnF1ZXVlUmVxdWVzdEgAEhoKA3BvcBgC",
+            "IAEoCzILLlBvcFJlcXVlc3RIABIqCgthY2tub3dsZWRnZRgDIAEoCzITLkFj",
+            "a25vd2xlZGdlUmVxdWVzdEgAEiwKDGF1dGhlbnRpY2F0ZRgGIAEoCzIULkF1",
+            "dGhlbnRpY2F0ZVJlcXVlc3RIAEIJCgdtZXNzYWdlIuoBCg9SZXNwb25zZVdy",
+            "YXBwZXISDQoFcmVmSWQYCiABKAUSIwoHZW5xdWV1ZRgBIAEoCzIQLkVucXVl",
+            "dWVSZXNwb25zZUgAEhsKA3BvcBgCIAEoCzIMLlBvcFJlc3BvbnNlSAASKwoL",
+            "YWNrbm93bGVkZ2UYAyABKAsyFC5BY2tub3dsZWRnZVJlc3BvbnNlSAASHwoF",
+            "ZXJyb3IYBCABKAsyDi5FcnJvclJlc3BvbnNlSAASLQoMYXV0aGVudGljYXRl",
+            "GAYgASgLMhUuQXV0aGVudGljYXRlUmVzcG9uc2VIAEIJCgdtZXNzYWdlKh0K",
+            "CFByaW9yaXR5EgcKA0xPVxAAEggKBEhJR0gQAUITWgdicnF1ZXVlqgIHYnJx",
+            "dWV1ZWIGcHJvdG8z"));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(new[] {typeof(global::brqueue.Priority), }, new pbr::GeneratedClrTypeInfo[] {
+            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.AuthenticateRequest), global::brqueue.AuthenticateRequest.Parser, new[]{ "Username", "Password" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.AuthenticateResponse), global::brqueue.AuthenticateResponse.Parser, new[]{ "Success" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.EnqueueRequest), global::brqueue.EnqueueRequest.Parser, new[]{ "Message", "Priority", "RequiredCapabilities" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.EnqueueResponse), global::brqueue.EnqueueResponse.Parser, new[]{ "Id" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.PopRequest), global::brqueue.PopRequest.Parser, new[]{ "AvailableCapabilities", "WaitForMessage" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.PopResponse), global::brqueue.PopResponse.Parser, new[]{ "HadResult", "Message", "Id" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.AcknowledgeRequest), global::brqueue.AcknowledgeRequest.Parser, new[]{ "Id" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.AcknowledgeResponse), global::brqueue.AcknowledgeResponse.Parser, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.ListFullQueueRequest), global::brqueue.ListFullQueueRequest.Parser, null, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.ListFullQueueResponse), global::brqueue.ListFullQueueResponse.Parser, new[]{ "SegmentIndex", "Message", "Id", "Finished" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.ErrorResponse), global::brqueue.ErrorResponse.Parser, new[]{ "Message" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.RequestWrapper), global::brqueue.RequestWrapper.Parser, new[]{ "RefId", "Enqueue", "Pop", "Acknowledge", "ListFullQueue" }, new[]{ "Message" }, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.ResponseWrapper), global::brqueue.ResponseWrapper.Parser, new[]{ "RefId", "Enqueue", "Pop", "Acknowledge", "Error", "ListFullQueue" }, new[]{ "Message" }, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.RequestWrapper), global::brqueue.RequestWrapper.Parser, new[]{ "RefId", "Enqueue", "Pop", "Acknowledge", "Authenticate" }, new[]{ "Message" }, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::brqueue.ResponseWrapper), global::brqueue.ResponseWrapper.Parser, new[]{ "RefId", "Enqueue", "Pop", "Acknowledge", "Error", "Authenticate" }, new[]{ "Message" }, null, null)
           }));
     }
     #endregion
@@ -75,6 +75,299 @@ namespace brqueue {
 
   #region Messages
   /// <summary>
+  /// Authenticates the single connection
+  /// </summary>
+  public sealed partial class AuthenticateRequest : pb::IMessage<AuthenticateRequest> {
+    private static readonly pb::MessageParser<AuthenticateRequest> _parser = new pb::MessageParser<AuthenticateRequest>(() => new AuthenticateRequest());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<AuthenticateRequest> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[0]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AuthenticateRequest() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AuthenticateRequest(AuthenticateRequest other) : this() {
+      username_ = other.username_;
+      password_ = other.password_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AuthenticateRequest Clone() {
+      return new AuthenticateRequest(this);
+    }
+
+    /// <summary>Field number for the "username" field.</summary>
+    public const int UsernameFieldNumber = 1;
+    private string username_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string Username {
+      get { return username_; }
+      set {
+        username_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    /// <summary>Field number for the "password" field.</summary>
+    public const int PasswordFieldNumber = 2;
+    private string password_ = "";
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public string Password {
+      get { return password_; }
+      set {
+        password_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as AuthenticateRequest);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(AuthenticateRequest other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Username != other.Username) return false;
+      if (Password != other.Password) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Username.Length != 0) hash ^= Username.GetHashCode();
+      if (Password.Length != 0) hash ^= Password.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Username.Length != 0) {
+        output.WriteRawTag(10);
+        output.WriteString(Username);
+      }
+      if (Password.Length != 0) {
+        output.WriteRawTag(18);
+        output.WriteString(Password);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Username.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Username);
+      }
+      if (Password.Length != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeStringSize(Password);
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(AuthenticateRequest other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Username.Length != 0) {
+        Username = other.Username;
+      }
+      if (other.Password.Length != 0) {
+        Password = other.Password;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 10: {
+            Username = input.ReadString();
+            break;
+          }
+          case 18: {
+            Password = input.ReadString();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  public sealed partial class AuthenticateResponse : pb::IMessage<AuthenticateResponse> {
+    private static readonly pb::MessageParser<AuthenticateResponse> _parser = new pb::MessageParser<AuthenticateResponse>(() => new AuthenticateResponse());
+    private pb::UnknownFieldSet _unknownFields;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<AuthenticateResponse> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AuthenticateResponse() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AuthenticateResponse(AuthenticateResponse other) : this() {
+      success_ = other.success_;
+      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public AuthenticateResponse Clone() {
+      return new AuthenticateResponse(this);
+    }
+
+    /// <summary>Field number for the "success" field.</summary>
+    public const int SuccessFieldNumber = 1;
+    private bool success_;
+    /// <summary>
+    /// True if the authentication was successful,
+    /// false otherwise
+    /// </summary>
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Success {
+      get { return success_; }
+      set {
+        success_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as AuthenticateResponse);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(AuthenticateResponse other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Success != other.Success) return false;
+      return Equals(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Success != false) hash ^= Success.GetHashCode();
+      if (_unknownFields != null) {
+        hash ^= _unknownFields.GetHashCode();
+      }
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Success != false) {
+        output.WriteRawTag(8);
+        output.WriteBool(Success);
+      }
+      if (_unknownFields != null) {
+        _unknownFields.WriteTo(output);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Success != false) {
+        size += 1 + 1;
+      }
+      if (_unknownFields != null) {
+        size += _unknownFields.CalculateSize();
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(AuthenticateResponse other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Success != false) {
+        Success = other.Success;
+      }
+      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
+            break;
+          case 8: {
+            Success = input.ReadBool();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
+  /// <summary>
   /// Puts a new message in the queue
   /// </summary>
   public sealed partial class EnqueueRequest : pb::IMessage<EnqueueRequest> {
@@ -85,7 +378,7 @@ namespace brqueue {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[0]; }
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -271,7 +564,7 @@ namespace brqueue {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[1]; }
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -406,7 +699,7 @@ namespace brqueue {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[2]; }
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[4]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -562,7 +855,7 @@ namespace brqueue {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[3]; }
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[5]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -757,7 +1050,7 @@ namespace brqueue {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[4]; }
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[6]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -892,7 +1185,7 @@ namespace brqueue {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[5]; }
+      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[7]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -979,342 +1272,6 @@ namespace brqueue {
           default:
             _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
             break;
-        }
-      }
-    }
-
-  }
-
-  /// <summary>
-  /// Write the full current queue back to the tpc stream
-  /// As the response is not instant, it doesn't gaurantee that some
-  /// of the messages hasn't been completed in the meantime, or
-  /// that new messages has arrived
-  /// </summary>
-  public sealed partial class ListFullQueueRequest : pb::IMessage<ListFullQueueRequest> {
-    private static readonly pb::MessageParser<ListFullQueueRequest> _parser = new pb::MessageParser<ListFullQueueRequest>(() => new ListFullQueueRequest());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ListFullQueueRequest> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[6]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ListFullQueueRequest() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ListFullQueueRequest(ListFullQueueRequest other) : this() {
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ListFullQueueRequest Clone() {
-      return new ListFullQueueRequest(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as ListFullQueueRequest);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(ListFullQueueRequest other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(ListFullQueueRequest other) {
-      if (other == null) {
-        return;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-        }
-      }
-    }
-
-  }
-
-  /// <summary>
-  /// A partial response about a single message in the queue
-  /// </summary>
-  public sealed partial class ListFullQueueResponse : pb::IMessage<ListFullQueueResponse> {
-    private static readonly pb::MessageParser<ListFullQueueResponse> _parser = new pb::MessageParser<ListFullQueueResponse>(() => new ListFullQueueResponse());
-    private pb::UnknownFieldSet _unknownFields;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pb::MessageParser<ListFullQueueResponse> Parser { get { return _parser; } }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public static pbr::MessageDescriptor Descriptor {
-      get { return global::brqueue.QueueReflection.Descriptor.MessageTypes[7]; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    pbr::MessageDescriptor pb::IMessage.Descriptor {
-      get { return Descriptor; }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ListFullQueueResponse() {
-      OnConstruction();
-    }
-
-    partial void OnConstruction();
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ListFullQueueResponse(ListFullQueueResponse other) : this() {
-      segmentIndex_ = other.segmentIndex_;
-      message_ = other.message_;
-      id_ = other.id_;
-      finished_ = other.finished_;
-      _unknownFields = pb::UnknownFieldSet.Clone(other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public ListFullQueueResponse Clone() {
-      return new ListFullQueueResponse(this);
-    }
-
-    /// <summary>Field number for the "segmentIndex" field.</summary>
-    public const int SegmentIndexFieldNumber = 1;
-    private int segmentIndex_;
-    /// <summary>
-    /// The index of this message, useful if the client wants to order messages
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int SegmentIndex {
-      get { return segmentIndex_; }
-      set {
-        segmentIndex_ = value;
-      }
-    }
-
-    /// <summary>Field number for the "message" field.</summary>
-    public const int MessageFieldNumber = 3;
-    private pb::ByteString message_ = pb::ByteString.Empty;
-    /// <summary>
-    /// The actual message
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public pb::ByteString Message {
-      get { return message_; }
-      set {
-        message_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "id" field.</summary>
-    public const int IdFieldNumber = 4;
-    private string id_ = "";
-    /// <summary>
-    /// The id of the message
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public string Id {
-      get { return id_; }
-      set {
-        id_ = pb::ProtoPreconditions.CheckNotNull(value, "value");
-      }
-    }
-
-    /// <summary>Field number for the "finished" field.</summary>
-    public const int FinishedFieldNumber = 5;
-    private bool finished_;
-    /// <summary>
-    /// If the listing has finished. When this is received, the
-    /// rest of the fields doesn't make sense
-    /// </summary>
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Finished {
-      get { return finished_; }
-      set {
-        finished_ = value;
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override bool Equals(object other) {
-      return Equals(other as ListFullQueueResponse);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public bool Equals(ListFullQueueResponse other) {
-      if (ReferenceEquals(other, null)) {
-        return false;
-      }
-      if (ReferenceEquals(other, this)) {
-        return true;
-      }
-      if (SegmentIndex != other.SegmentIndex) return false;
-      if (Message != other.Message) return false;
-      if (Id != other.Id) return false;
-      if (Finished != other.Finished) return false;
-      return Equals(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override int GetHashCode() {
-      int hash = 1;
-      if (SegmentIndex != 0) hash ^= SegmentIndex.GetHashCode();
-      if (Message.Length != 0) hash ^= Message.GetHashCode();
-      if (Id.Length != 0) hash ^= Id.GetHashCode();
-      if (Finished != false) hash ^= Finished.GetHashCode();
-      if (_unknownFields != null) {
-        hash ^= _unknownFields.GetHashCode();
-      }
-      return hash;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public override string ToString() {
-      return pb::JsonFormatter.ToDiagnosticString(this);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void WriteTo(pb::CodedOutputStream output) {
-      if (SegmentIndex != 0) {
-        output.WriteRawTag(8);
-        output.WriteInt32(SegmentIndex);
-      }
-      if (Message.Length != 0) {
-        output.WriteRawTag(26);
-        output.WriteBytes(Message);
-      }
-      if (Id.Length != 0) {
-        output.WriteRawTag(34);
-        output.WriteString(Id);
-      }
-      if (Finished != false) {
-        output.WriteRawTag(40);
-        output.WriteBool(Finished);
-      }
-      if (_unknownFields != null) {
-        _unknownFields.WriteTo(output);
-      }
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int CalculateSize() {
-      int size = 0;
-      if (SegmentIndex != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(SegmentIndex);
-      }
-      if (Message.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeBytesSize(Message);
-      }
-      if (Id.Length != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeStringSize(Id);
-      }
-      if (Finished != false) {
-        size += 1 + 1;
-      }
-      if (_unknownFields != null) {
-        size += _unknownFields.CalculateSize();
-      }
-      return size;
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(ListFullQueueResponse other) {
-      if (other == null) {
-        return;
-      }
-      if (other.SegmentIndex != 0) {
-        SegmentIndex = other.SegmentIndex;
-      }
-      if (other.Message.Length != 0) {
-        Message = other.Message;
-      }
-      if (other.Id.Length != 0) {
-        Id = other.Id;
-      }
-      if (other.Finished != false) {
-        Finished = other.Finished;
-      }
-      _unknownFields = pb::UnknownFieldSet.MergeFrom(_unknownFields, other._unknownFields);
-    }
-
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public void MergeFrom(pb::CodedInputStream input) {
-      uint tag;
-      while ((tag = input.ReadTag()) != 0) {
-        switch(tag) {
-          default:
-            _unknownFields = pb::UnknownFieldSet.MergeFieldFrom(_unknownFields, input);
-            break;
-          case 8: {
-            SegmentIndex = input.ReadInt32();
-            break;
-          }
-          case 26: {
-            Message = input.ReadBytes();
-            break;
-          }
-          case 34: {
-            Id = input.ReadString();
-            break;
-          }
-          case 40: {
-            Finished = input.ReadBool();
-            break;
-          }
         }
       }
     }
@@ -1492,8 +1449,8 @@ namespace brqueue {
         case MessageOneofCase.Acknowledge:
           Acknowledge = other.Acknowledge.Clone();
           break;
-        case MessageOneofCase.ListFullQueue:
-          ListFullQueue = other.ListFullQueue.Clone();
+        case MessageOneofCase.Authenticate:
+          Authenticate = other.Authenticate.Clone();
           break;
       }
 
@@ -1549,14 +1506,14 @@ namespace brqueue {
       }
     }
 
-    /// <summary>Field number for the "listFullQueue" field.</summary>
-    public const int ListFullQueueFieldNumber = 4;
+    /// <summary>Field number for the "authenticate" field.</summary>
+    public const int AuthenticateFieldNumber = 6;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::brqueue.ListFullQueueRequest ListFullQueue {
-      get { return messageCase_ == MessageOneofCase.ListFullQueue ? (global::brqueue.ListFullQueueRequest) message_ : null; }
+    public global::brqueue.AuthenticateRequest Authenticate {
+      get { return messageCase_ == MessageOneofCase.Authenticate ? (global::brqueue.AuthenticateRequest) message_ : null; }
       set {
         message_ = value;
-        messageCase_ = value == null ? MessageOneofCase.None : MessageOneofCase.ListFullQueue;
+        messageCase_ = value == null ? MessageOneofCase.None : MessageOneofCase.Authenticate;
       }
     }
 
@@ -1567,7 +1524,7 @@ namespace brqueue {
       Enqueue = 1,
       Pop = 2,
       Acknowledge = 3,
-      ListFullQueue = 4,
+      Authenticate = 6,
     }
     private MessageOneofCase messageCase_ = MessageOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1598,7 +1555,7 @@ namespace brqueue {
       if (!object.Equals(Enqueue, other.Enqueue)) return false;
       if (!object.Equals(Pop, other.Pop)) return false;
       if (!object.Equals(Acknowledge, other.Acknowledge)) return false;
-      if (!object.Equals(ListFullQueue, other.ListFullQueue)) return false;
+      if (!object.Equals(Authenticate, other.Authenticate)) return false;
       if (MessageCase != other.MessageCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -1610,7 +1567,7 @@ namespace brqueue {
       if (messageCase_ == MessageOneofCase.Enqueue) hash ^= Enqueue.GetHashCode();
       if (messageCase_ == MessageOneofCase.Pop) hash ^= Pop.GetHashCode();
       if (messageCase_ == MessageOneofCase.Acknowledge) hash ^= Acknowledge.GetHashCode();
-      if (messageCase_ == MessageOneofCase.ListFullQueue) hash ^= ListFullQueue.GetHashCode();
+      if (messageCase_ == MessageOneofCase.Authenticate) hash ^= Authenticate.GetHashCode();
       hash ^= (int) messageCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -1637,9 +1594,9 @@ namespace brqueue {
         output.WriteRawTag(26);
         output.WriteMessage(Acknowledge);
       }
-      if (messageCase_ == MessageOneofCase.ListFullQueue) {
-        output.WriteRawTag(34);
-        output.WriteMessage(ListFullQueue);
+      if (messageCase_ == MessageOneofCase.Authenticate) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Authenticate);
       }
       if (RefId != 0) {
         output.WriteRawTag(80);
@@ -1665,8 +1622,8 @@ namespace brqueue {
       if (messageCase_ == MessageOneofCase.Acknowledge) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Acknowledge);
       }
-      if (messageCase_ == MessageOneofCase.ListFullQueue) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ListFullQueue);
+      if (messageCase_ == MessageOneofCase.Authenticate) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Authenticate);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -1701,11 +1658,11 @@ namespace brqueue {
           }
           Acknowledge.MergeFrom(other.Acknowledge);
           break;
-        case MessageOneofCase.ListFullQueue:
-          if (ListFullQueue == null) {
-            ListFullQueue = new global::brqueue.ListFullQueueRequest();
+        case MessageOneofCase.Authenticate:
+          if (Authenticate == null) {
+            Authenticate = new global::brqueue.AuthenticateRequest();
           }
-          ListFullQueue.MergeFrom(other.ListFullQueue);
+          Authenticate.MergeFrom(other.Authenticate);
           break;
       }
 
@@ -1747,13 +1704,13 @@ namespace brqueue {
             Acknowledge = subBuilder;
             break;
           }
-          case 34: {
-            global::brqueue.ListFullQueueRequest subBuilder = new global::brqueue.ListFullQueueRequest();
-            if (messageCase_ == MessageOneofCase.ListFullQueue) {
-              subBuilder.MergeFrom(ListFullQueue);
+          case 50: {
+            global::brqueue.AuthenticateRequest subBuilder = new global::brqueue.AuthenticateRequest();
+            if (messageCase_ == MessageOneofCase.Authenticate) {
+              subBuilder.MergeFrom(Authenticate);
             }
             input.ReadMessage(subBuilder);
-            ListFullQueue = subBuilder;
+            Authenticate = subBuilder;
             break;
           }
           case 80: {
@@ -1805,8 +1762,8 @@ namespace brqueue {
         case MessageOneofCase.Error:
           Error = other.Error.Clone();
           break;
-        case MessageOneofCase.ListFullQueue:
-          ListFullQueue = other.ListFullQueue.Clone();
+        case MessageOneofCase.Authenticate:
+          Authenticate = other.Authenticate.Clone();
           break;
       }
 
@@ -1876,14 +1833,14 @@ namespace brqueue {
       }
     }
 
-    /// <summary>Field number for the "listFullQueue" field.</summary>
-    public const int ListFullQueueFieldNumber = 5;
+    /// <summary>Field number for the "authenticate" field.</summary>
+    public const int AuthenticateFieldNumber = 6;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public global::brqueue.ListFullQueueResponse ListFullQueue {
-      get { return messageCase_ == MessageOneofCase.ListFullQueue ? (global::brqueue.ListFullQueueResponse) message_ : null; }
+    public global::brqueue.AuthenticateResponse Authenticate {
+      get { return messageCase_ == MessageOneofCase.Authenticate ? (global::brqueue.AuthenticateResponse) message_ : null; }
       set {
         message_ = value;
-        messageCase_ = value == null ? MessageOneofCase.None : MessageOneofCase.ListFullQueue;
+        messageCase_ = value == null ? MessageOneofCase.None : MessageOneofCase.Authenticate;
       }
     }
 
@@ -1895,7 +1852,7 @@ namespace brqueue {
       Pop = 2,
       Acknowledge = 3,
       Error = 4,
-      ListFullQueue = 5,
+      Authenticate = 6,
     }
     private MessageOneofCase messageCase_ = MessageOneofCase.None;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -1927,7 +1884,7 @@ namespace brqueue {
       if (!object.Equals(Pop, other.Pop)) return false;
       if (!object.Equals(Acknowledge, other.Acknowledge)) return false;
       if (!object.Equals(Error, other.Error)) return false;
-      if (!object.Equals(ListFullQueue, other.ListFullQueue)) return false;
+      if (!object.Equals(Authenticate, other.Authenticate)) return false;
       if (MessageCase != other.MessageCase) return false;
       return Equals(_unknownFields, other._unknownFields);
     }
@@ -1940,7 +1897,7 @@ namespace brqueue {
       if (messageCase_ == MessageOneofCase.Pop) hash ^= Pop.GetHashCode();
       if (messageCase_ == MessageOneofCase.Acknowledge) hash ^= Acknowledge.GetHashCode();
       if (messageCase_ == MessageOneofCase.Error) hash ^= Error.GetHashCode();
-      if (messageCase_ == MessageOneofCase.ListFullQueue) hash ^= ListFullQueue.GetHashCode();
+      if (messageCase_ == MessageOneofCase.Authenticate) hash ^= Authenticate.GetHashCode();
       hash ^= (int) messageCase_;
       if (_unknownFields != null) {
         hash ^= _unknownFields.GetHashCode();
@@ -1971,9 +1928,9 @@ namespace brqueue {
         output.WriteRawTag(34);
         output.WriteMessage(Error);
       }
-      if (messageCase_ == MessageOneofCase.ListFullQueue) {
-        output.WriteRawTag(42);
-        output.WriteMessage(ListFullQueue);
+      if (messageCase_ == MessageOneofCase.Authenticate) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Authenticate);
       }
       if (RefId != 0) {
         output.WriteRawTag(80);
@@ -2002,8 +1959,8 @@ namespace brqueue {
       if (messageCase_ == MessageOneofCase.Error) {
         size += 1 + pb::CodedOutputStream.ComputeMessageSize(Error);
       }
-      if (messageCase_ == MessageOneofCase.ListFullQueue) {
-        size += 1 + pb::CodedOutputStream.ComputeMessageSize(ListFullQueue);
+      if (messageCase_ == MessageOneofCase.Authenticate) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Authenticate);
       }
       if (_unknownFields != null) {
         size += _unknownFields.CalculateSize();
@@ -2044,11 +2001,11 @@ namespace brqueue {
           }
           Error.MergeFrom(other.Error);
           break;
-        case MessageOneofCase.ListFullQueue:
-          if (ListFullQueue == null) {
-            ListFullQueue = new global::brqueue.ListFullQueueResponse();
+        case MessageOneofCase.Authenticate:
+          if (Authenticate == null) {
+            Authenticate = new global::brqueue.AuthenticateResponse();
           }
-          ListFullQueue.MergeFrom(other.ListFullQueue);
+          Authenticate.MergeFrom(other.Authenticate);
           break;
       }
 
@@ -2099,13 +2056,13 @@ namespace brqueue {
             Error = subBuilder;
             break;
           }
-          case 42: {
-            global::brqueue.ListFullQueueResponse subBuilder = new global::brqueue.ListFullQueueResponse();
-            if (messageCase_ == MessageOneofCase.ListFullQueue) {
-              subBuilder.MergeFrom(ListFullQueue);
+          case 50: {
+            global::brqueue.AuthenticateResponse subBuilder = new global::brqueue.AuthenticateResponse();
+            if (messageCase_ == MessageOneofCase.Authenticate) {
+              subBuilder.MergeFrom(Authenticate);
             }
             input.ReadMessage(subBuilder);
-            ListFullQueue = subBuilder;
+            Authenticate = subBuilder;
             break;
           }
           case 80: {

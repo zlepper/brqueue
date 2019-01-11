@@ -1,5 +1,6 @@
 use core::borrow::BorrowMut;
 use std::collections::HashSet;
+use std::convert::From;
 use std::io::Cursor;
 use std::io::Error as IOError;
 use std::io::Read;
@@ -14,6 +15,8 @@ use log::debug;
 use protobuf::{Message, ProtobufError};
 use uuid::Uuid;
 
+use crate::authentication::Authentication;
+use crate::authentication::AuthenticationError;
 use crate::binary::get_size;
 use crate::binary::get_size_array;
 use crate::models;
@@ -28,6 +31,8 @@ enum Error {
     ResponseError(IOError),
     ConnectionReset,
     RequestError(String),
+    AuthenticationFailed(AuthenticationError),
+    InvalidLogin
 }
 
 impl std::fmt::Display for Error {
@@ -38,8 +43,16 @@ impl std::fmt::Display for Error {
             Error::ParseError(e) => write!(f, "ParseError: {}", e),
             Error::ResponseError(e) => write!(f, "ResponseError: {}", e),
             Error::ConnectionReset => write!(f, "Connection reset"),
-            Error::RequestError(s) => write!(f, "{}", s),
+            Error::RequestError(s) => write!(f, "Request error: {}", s),
+            Error::AuthenticationFailed(e) => write!(f, "Authentication Failed: {}", e),
+            Error::InvalidLogin => write!(f, "Invalid login")
         }
+    }
+}
+
+impl From<AuthenticationError> for Error {
+    fn from(e: AuthenticationError) -> Self {
+        Error::AuthenticationFailed(e)
     }
 }
 
@@ -125,13 +138,15 @@ fn reply_error(s: &mut TcpStream, message: String, ref_id: i32) {
 pub struct Client {
     queue_server: queue_server::QueueServer<Vec<u8>>,
     outstanding_tasks: Arc<Mutex<HashSet<Uuid>>>,
+    auth: Authentication
 }
 
 impl Client {
-    pub fn new(queue_server: queue_server::QueueServer<Vec<u8>>) -> Client {
+    pub fn new(queue_server: queue_server::QueueServer<Vec<u8>>, auth: Authentication) -> Client {
         Client {
             queue_server,
             outstanding_tasks: Arc::new(Mutex::new(HashSet::new())),
+            auth
         }
     }
 
@@ -249,17 +264,46 @@ impl Client {
         }
     }
 
+    fn ensure_auth(&self, s: &mut TcpStream) -> Result<(), Error> {
+        let data = read_message(s)?;
+
+        let message = parse_request(data)?;
+
+        if !message.has_authenticate() {
+            return Err(Error::RequestError("Invalid request".to_string()));
+        }
+
+        let request = message.get_authenticate();
+
+        let success = self.auth.verify_user(&request.username, &request.password)?;
+
+        let mut response = rpc::AuthenticateResponse::new();
+        response.set_success(success);
+        let mut wrapper = rpc::ResponseWrapper::new();
+        wrapper.set_authenticate(response);
+        wrapper.set_refId(message.refId);
+        send_reply(s, wrapper)?;
+
+        if success {
+            Ok(())
+        } else {
+            Err(Error::InvalidLogin)
+        }
+    }
+
     pub fn handle_connection(mut self, mut s: TcpStream) {
+        match self.ensure_auth(&mut s) {
+            Err(e) => {
+                println!("Failed to authenticate connection: {}", e);
+                return;
+            }
+            Ok(()) => {},
+        }
+
+
         loop {
             match read_message(&mut s) {
                 Ok(data) => {
-                    let mut s = match s.try_clone() {
-                        Ok(socket) => socket,
-                        Err(e) => {
-                            eprintln!("Failed to clone socket, assuming this means it's dead..");
-                            return;
-                        }
-                    };
                     let message = match parse_request(data) {
                         Ok(message) => message,
                         Err(e) => {
