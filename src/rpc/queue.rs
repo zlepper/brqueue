@@ -189,7 +189,7 @@ impl ::protobuf::Message for AuthenticateRequest {
                 ::protobuf::reflect::MessageDescriptor::new::<AuthenticateRequest>(
                     "AuthenticateRequest",
                     fields,
-                    file_descriptor_proto(),
+                    file_descriptor_proto()
                 )
             })
         }
@@ -346,7 +346,7 @@ impl ::protobuf::Message for AuthenticateResponse {
                 ::protobuf::reflect::MessageDescriptor::new::<AuthenticateResponse>(
                     "AuthenticateResponse",
                     fields,
-                    file_descriptor_proto(),
+                    file_descriptor_proto()
                 )
             })
         }
